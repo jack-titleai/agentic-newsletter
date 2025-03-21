@@ -1,7 +1,6 @@
 """Database manager for Agentic Newsletter."""
 
 import logging
-import statistics
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -204,15 +203,9 @@ class DatabaseManager:
             ParserLog: The created parser log.
         """
         with self.get_session() as session:
-            # Calculate statistics
-            avg_articles = sum(articles_per_email) / len(articles_per_email) if articles_per_email else 0
-            median_articles = statistics.median(articles_per_email) if articles_per_email else 0
-            
             parser_log = ParserLog(
                 duration_seconds=duration_seconds,
                 articles_found=articles_found,
-                average_articles_per_email=avg_articles,
-                median_articles_per_email=median_articles,
                 error_message=error_message,
             )
             session.add(parser_log)

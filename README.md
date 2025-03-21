@@ -114,7 +114,7 @@ see examples/parse_newsletter.py, no further instruction is needed other than lo
 The system now includes database integration for storing parsed articles. Two new tables have been added:
 
 1. `parsed_articles` - Stores articles extracted from emails
-2. `parser_logs` - Tracks parsing operations and statistics
+2. `parser_logs` - Tracks parsing operations with duration and article count statistics
 
 ### Parsing Unparsed Emails
 
@@ -132,3 +132,20 @@ python scripts/parse_emails.py --limit 5
 
 # Dry run (don't save to database)
 python scripts/parse_emails.py --dry-run
+
+```
+
+### Database Migration
+
+If you need to migrate the database schema after updates, use the migration scripts provided:
+
+```bash
+# Migrate parser_logs table (removes average and median article counts)
+python scripts/migrate_parser_logs.py
+
+# Run with verbose logging
+python scripts/migrate_parser_logs.py -v
+
+# Dry run (don't modify the database)
+python scripts/migrate_parser_logs.py --dry-run
+```

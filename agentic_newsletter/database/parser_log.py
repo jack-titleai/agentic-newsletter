@@ -16,8 +16,6 @@ class ParserLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     duration_seconds = Column(Float, nullable=False)
     articles_found = Column(Integer, nullable=False)
-    average_articles_per_email = Column(Float, nullable=False)
-    median_articles_per_email = Column(Float, nullable=False)
     error_message = Column(Text, nullable=True)
 
     def __repr__(self) -> str:
