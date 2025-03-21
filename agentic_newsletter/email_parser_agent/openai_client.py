@@ -40,16 +40,36 @@ class OpenAIClient:
         try:
             self.logger.debug(f"Sending request to OpenAI API using model {self.model}")
             
-            # Use json_object format directly to avoid unnecessary API calls
-            response = self.client.chat.completions.create(
-                model=self.model,
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": ARTICLE_EXTRACTION_PROMPT},
-                    {"role": "user", "content": text}
-                ],
-                temperature=0.1,  # Lower temperature for more deterministic output
-            )
+            # Use json_schema format with our updated schema
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "article_extraction",
+                            "schema": ARTICLE_EXTRACTION_SCHEMA,
+                            "strict": True
+                        }
+                    },
+                    messages=[
+                        {"role": "system", "content": ARTICLE_EXTRACTION_PROMPT},
+                        {"role": "user", "content": text}
+                    ],
+                    temperature=0.1,  # Lower temperature for more deterministic output
+                )
+            except Exception as e:
+                # If json_schema format fails, fall back to basic json_object format
+                self.logger.warning(f"Failed to use json_schema format: {e}. Falling back to json_object format.")
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    response_format={"type": "json_object"},
+                    messages=[
+                        {"role": "system", "content": ARTICLE_EXTRACTION_PROMPT},
+                        {"role": "user", "content": text}
+                    ],
+                    temperature=0.1,  # Lower temperature for more deterministic output
+                )
             
             # Extract and parse JSON response
             content = response.choices[0].message.content

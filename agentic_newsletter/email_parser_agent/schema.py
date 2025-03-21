@@ -24,17 +24,24 @@ ARTICLE_EXTRACTION_SCHEMA = {
                     },
                     "url": {
                         "type": ["string", "null"],
-                        "description": "URL associated with the article, if present"
+                        "description": "URL associated with the article, if present. Use null if no URL is found in the text."
                     },
                     "tags": {
-                        "type": "array",
-                        "description": "Relevant tags or categories for the article",
-                        "items": {
-                            "type": "string"
-                        }
+                        "anyOf": [
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Relevant tags or categories for the article. Use null if no tags can be inferred from the text."
                     }
                 },
-                "required": ["title", "summary", "body"],
+                "required": ["title", "summary", "body", "url", "tags"],
                 "additionalProperties": False
             }
         }
