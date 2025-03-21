@@ -107,4 +107,28 @@ downloader.download_emails()
 
 ## Email Parser Agent Usage
 
-see examples/parse_newsletter.py
+see examples/parse_newsletter.py, no further instruction is needed other than looking at the code here
+
+## Database Integration
+
+The system now includes database integration for storing parsed articles. Two new tables have been added:
+
+1. `parsed_articles` - Stores articles extracted from emails
+2. `parser_logs` - Tracks parsing operations and statistics
+
+### Parsing Unparsed Emails
+
+To parse emails that have been downloaded but not yet parsed, use the `parse_emails.py` script:
+
+```bash
+# Parse all unparsed emails
+python scripts/parse_emails.py
+
+# Parse with verbose logging
+python scripts/parse_emails.py -v
+
+# Parse only the first 5 unparsed emails
+python scripts/parse_emails.py --limit 5
+
+# Dry run (don't save to database)
+python scripts/parse_emails.py --dry-run

@@ -34,9 +34,11 @@ ARTICLE_EXTRACTION_SCHEMA = {
                         }
                     }
                 },
-                "required": ["title", "summary", "body"]
+                "required": ["title", "summary", "body"],
+                "additionalProperties": False
             }
         }
     },
-    "required": ["articles"]
+    "required": ["articles"],
+    "additionalProperties": False
 }

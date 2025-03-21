@@ -23,6 +23,7 @@ class Email(Base):
     message_id = Column(String(255), unique=True, nullable=False)
 
     source = relationship("EmailSource", back_populates="emails")
+    parsed_articles = relationship("ParsedArticle", back_populates="email")
 
     def __repr__(self) -> str:
         """Return a string representation of the email.

@@ -1,6 +1,7 @@
 """Database manager for Agentic Newsletter."""
 
 import logging
+import statistics
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -9,7 +10,8 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from agentic_newsletter.config.config_loader import ConfigLoader
-from agentic_newsletter.database import Base, DownloadLog, Email, EmailSource
+from agentic_newsletter.database import Base, DownloadLog, Email, EmailSource, ParsedArticle, ParserLog
+from agentic_newsletter.email_parser_agent.article import Article
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +187,40 @@ class DatabaseManager:
             
             logger.info(f"Logged download: {emails_downloaded} emails in {duration_seconds:.2f}s")
             return download_log
+    
+    def log_parsing(
+        self, duration_seconds: float, articles_found: int, 
+        articles_per_email: List[int], error_message: Optional[str] = None
+    ) -> ParserLog:
+        """Log a parsing operation.
+        
+        Args:
+            duration_seconds (float): The duration of the parsing operation in seconds.
+            articles_found (int): The number of articles found.
+            articles_per_email (List[int]): List of article counts per email.
+            error_message (Optional[str], optional): An error message, if any. Defaults to None.
+            
+        Returns:
+            ParserLog: The created parser log.
+        """
+        with self.get_session() as session:
+            # Calculate statistics
+            avg_articles = sum(articles_per_email) / len(articles_per_email) if articles_per_email else 0
+            median_articles = statistics.median(articles_per_email) if articles_per_email else 0
+            
+            parser_log = ParserLog(
+                duration_seconds=duration_seconds,
+                articles_found=articles_found,
+                average_articles_per_email=avg_articles,
+                median_articles_per_email=median_articles,
+                error_message=error_message,
+            )
+            session.add(parser_log)
+            session.commit()
+            session.refresh(parser_log)
+            
+            logger.info(f"Logged parsing: {articles_found} articles in {duration_seconds:.2f}s")
+            return parser_log
 
     def get_email_by_message_id(self, message_id: str) -> Optional[Email]:
         """Get an email by its message ID.
@@ -199,6 +235,53 @@ class DatabaseManager:
             return session.execute(
                 select(Email).where(Email.message_id == message_id)
             ).scalar_one_or_none()
+    
+    def add_parsed_article(self, article: Article, email_id: int, sender: str) -> ParsedArticle:
+        """Add a parsed article to the database.
+        
+        Args:
+            article (Article): The article to add.
+            email_id (int): The ID of the email the article was parsed from.
+            sender (str): The sender of the email.
+            
+        Returns:
+            ParsedArticle: The added parsed article.
+        """
+        with self.get_session() as session:
+            parsed_article = ParsedArticle.from_article(article, email_id, sender)
+            session.add(parsed_article)
+            session.commit()
+            session.refresh(parsed_article)
+            
+            logger.debug(f"Added parsed article: {parsed_article.title}")
+            return parsed_article
+    
+    def get_unparsed_emails(self) -> List[Email]:
+        """Get all emails that have not been parsed yet.
+        
+        Returns:
+            List[Email]: A list of unparsed emails.
+        """
+        with self.get_session() as session:
+            # Query for emails that don't have any parsed articles
+            query = select(Email).outerjoin(ParsedArticle).where(ParsedArticle.id == None)
+            return list(session.execute(query).scalars().all())
+    
+    def is_email_parsed(self, email_id: int) -> bool:
+        """Check if an email has been parsed.
+        
+        Args:
+            email_id (int): The ID of the email to check.
+            
+        Returns:
+            bool: True if the email has been parsed, False otherwise.
+        """
+        with self.get_session() as session:
+            # Check if there are any parsed articles for this email
+            count = session.execute(
+                select(ParsedArticle).where(ParsedArticle.email_id == email_id)
+            ).first() is not None
+            return count
 
     def get_download_logs(self, limit: int = 10) -> List[DownloadLog]:
         """Get the most recent download logs.
