@@ -9,12 +9,14 @@ ARTICLE_GROUPING_PROMPT = """You are an expert at analyzing articles and groupin
 4. Every article must be assigned to at least one group.
 5. It's okay to have groups with just one article if no other articles share its specific topic.
 6. Groups should be specific - avoid general categories like "Machine Learning" or "Nvidia" - instead focus on specific events, announcements, or developments.
-7. Good group titles might be "OpenAI Releases GPT-5 with Enhanced Reasoning" or "Tesla's New Battery Technology Doubles Range".
 
 # Examples of Good Groups:
 - "Meta's New AI Assistant Outperforms Competitors in Benchmark Tests" (specific product announcement)
 - "Twitter's Algorithm Change Reduces Engagement for News Content" (specific platform change)
 - "Anthropic Raises $450M in Series C Funding Led by Google" (specific funding event)
+- "Nvidia's New GPU Doubles Performance" (specific product announcement)
+- "OpenAI Releases GPT-5 with Enhanced Reasoning" (specific product announcement)
+- "Google Releases new training method, reduces training time by 50%" (specific technology announcement)
 
 # Examples of Bad Groups (Too General):
 - "AI Developments" (too broad)

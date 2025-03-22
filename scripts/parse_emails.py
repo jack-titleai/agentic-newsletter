@@ -41,7 +41,8 @@ def parse_emails(
     parser: EmailParserAgent, 
     limit: int = None, 
     dry_run: bool = False,
-    start_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None,
+    delay_between_emails: float = 0.0
 ) -> None:
     """Parse unparsed emails and add them to the database.
     
@@ -53,6 +54,8 @@ def parse_emails(
             Defaults to False.
         start_date (Optional[datetime], optional): If provided, only parse emails received
             on or after this date. Defaults to None.
+        delay_between_emails (float, optional): Delay in seconds between processing emails.
+            Useful to avoid rate limiting. Defaults to 0.0 (no delay).
     """
     # Get unparsed emails
     unparsed_emails = db_manager.get_unparsed_emails(start_date)
@@ -72,18 +75,26 @@ def parse_emails(
     # Track statistics for logging
     total_articles = 0
     articles_per_email = []
+    emails_processed = 0
+    emails_with_errors = 0
     start_time = time.time()
     error_message = None
     
-    try:
-        for email in unparsed_emails:
-            logging.info(f"Parsing email from {email.sender_email} with subject: {email.subject}")
+    for i, email in enumerate(unparsed_emails):
+        # Double-check if the email has already been parsed
+        if db_manager.is_email_parsed(email.id):
+            logging.info(f"Skipping already parsed email from {email.sender_email}: {email.subject}")
+            continue
             
+        logging.info(f"Parsing email from {email.sender_email} with subject: {email.subject}")
+        
+        try:
             # Parse the email
             articles = parser.parse_text(email.body)
             articles_count = len(articles)
             articles_per_email.append(articles_count)
             total_articles += articles_count
+            emails_processed += 1
             
             logging.info(f"Extracted {articles_count} AI-related articles from email.")
             
@@ -93,9 +104,18 @@ def parse_emails(
                     db_manager.add_parsed_article(article, email.id, email.sender_email)
                 
                 logging.info(f"Added {articles_count} articles to the database.")
-    except Exception as e:
-        error_message = str(e)
-        logging.error(f"Error parsing emails: {e}")
+        except Exception as e:
+            emails_with_errors += 1
+            error_msg = f"Error processing email from {email.sender_email} with subject '{email.subject}': {e}"
+            logging.error(error_msg)
+            if not error_message:  # Store the first error for logging
+                error_message = error_msg
+            # Continue with the next email
+        
+        # Add delay between emails if specified and not the last email
+        if delay_between_emails > 0 and i < len(unparsed_emails) - 1:
+            logging.debug(f"Waiting {delay_between_emails} seconds before processing next email...")
+            time.sleep(delay_between_emails)
     
     # Calculate duration
     duration = time.time() - start_time
@@ -110,6 +130,9 @@ def parse_emails(
         )
     
     logging.info(f"Parsing completed in {duration:.2f} seconds.")
+    logging.info(f"Emails processed successfully: {emails_processed}")
+    if emails_with_errors > 0:
+        logging.info(f"Emails with errors (skipped): {emails_with_errors}")
     logging.info(f"Total AI-related articles extracted: {total_articles}")
 
 
@@ -128,6 +151,9 @@ def main() -> None:
     parser.add_argument(
         "--start-date", type=str, help="Only parse emails received on or after this date (format: YYYY-MM-DD)",
         default=None
+    )
+    parser.add_argument(
+        "--delay-between-emails", type=float, help="Delay in seconds between processing emails", default=0.0
     )
     args = parser.parse_args()
     
@@ -156,7 +182,7 @@ def main() -> None:
     logging.info("Parser will only extract AI-related articles")
     
     # Parse emails
-    parse_emails(db_manager, parser_agent, args.limit, args.dry_run, start_date)
+    parse_emails(db_manager, parser_agent, args.limit, args.dry_run, start_date, args.delay_between_emails)
 
 
 if __name__ == "__main__":
