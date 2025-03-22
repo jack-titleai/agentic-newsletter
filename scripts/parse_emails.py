@@ -6,8 +6,9 @@ import logging
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 # Add the parent directory to the Python path if running directly
 parent_dir = Path(__file__).parent.parent
@@ -35,8 +36,13 @@ def setup_logging(verbose: bool = False) -> None:
     )
 
 
-def parse_emails(db_manager: DatabaseManager, parser: EmailParserAgent, 
-                limit: int = None, dry_run: bool = False) -> None:
+def parse_emails(
+    db_manager: DatabaseManager, 
+    parser: EmailParserAgent, 
+    limit: int = None, 
+    dry_run: bool = False,
+    start_date: Optional[datetime] = None
+) -> None:
     """Parse unparsed emails and add them to the database.
     
     Args:
@@ -45,9 +51,11 @@ def parse_emails(db_manager: DatabaseManager, parser: EmailParserAgent,
         limit (int, optional): Maximum number of emails to parse. Defaults to None (all).
         dry_run (bool, optional): If True, don't actually add parsed articles to the database.
             Defaults to False.
+        start_date (Optional[datetime], optional): If provided, only parse emails received
+            on or after this date. Defaults to None.
     """
     # Get unparsed emails
-    unparsed_emails = db_manager.get_unparsed_emails()
+    unparsed_emails = db_manager.get_unparsed_emails(start_date)
     
     if limit is not None:
         unparsed_emails = unparsed_emails[:limit]
@@ -56,7 +64,10 @@ def parse_emails(db_manager: DatabaseManager, parser: EmailParserAgent,
         logging.info("No unparsed emails found.")
         return
     
-    logging.info(f"Found {len(unparsed_emails)} unparsed emails.")
+    if start_date:
+        logging.info(f"Found {len(unparsed_emails)} unparsed emails from {start_date.strftime('%Y-%m-%d')}.")
+    else:
+        logging.info(f"Found {len(unparsed_emails)} unparsed emails.")
     
     # Track statistics for logging
     total_articles = 0
@@ -74,7 +85,7 @@ def parse_emails(db_manager: DatabaseManager, parser: EmailParserAgent,
             articles_per_email.append(articles_count)
             total_articles += articles_count
             
-            logging.info(f"Extracted {articles_count} articles from email.")
+            logging.info(f"Extracted {articles_count} AI-related articles from email.")
             
             if not dry_run:
                 # Add parsed articles to the database
@@ -99,7 +110,7 @@ def parse_emails(db_manager: DatabaseManager, parser: EmailParserAgent,
         )
     
     logging.info(f"Parsing completed in {duration:.2f} seconds.")
-    logging.info(f"Total articles extracted: {total_articles}")
+    logging.info(f"Total AI-related articles extracted: {total_articles}")
 
 
 def main() -> None:
@@ -114,6 +125,10 @@ def main() -> None:
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable verbose logging"
     )
+    parser.add_argument(
+        "--start-date", type=str, help="Only parse emails received on or after this date (format: YYYY-MM-DD)",
+        default=None
+    )
     args = parser.parse_args()
     
     # Set up logging
@@ -124,12 +139,24 @@ def main() -> None:
         logging.error("OPENAI_API_KEY environment variable not set")
         sys.exit(1)
     
+    # Parse start date if provided
+    start_date = None
+    if args.start_date:
+        try:
+            start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
+            logging.info(f"Only parsing emails from {args.start_date} onwards")
+        except ValueError:
+            logging.error(f"Invalid date format: {args.start_date}. Use YYYY-MM-DD format.")
+            sys.exit(1)
+    
     # Initialize the database manager and parser
     db_manager = DatabaseManager()
     parser_agent = EmailParserAgent()
     
+    logging.info("Parser will only extract AI-related articles")
+    
     # Parse emails
-    parse_emails(db_manager, parser_agent, args.limit, args.dry_run)
+    parse_emails(db_manager, parser_agent, args.limit, args.dry_run, start_date)
 
 
 if __name__ == "__main__":

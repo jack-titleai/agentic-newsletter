@@ -9,7 +9,10 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from agentic_newsletter.config.config_loader import ConfigLoader
-from agentic_newsletter.database import Base, DownloadLog, Email, EmailSource, ParsedArticle, ParserLog
+from agentic_newsletter.database import (
+    ArticleGroup, ArticleGroupItem, Base, DownloadLog, Email, EmailSource, 
+    GroupingLog, ParsedArticle, ParserLog
+)
 from agentic_newsletter.email_parser_agent.article import Article
 
 logger = logging.getLogger(__name__)
@@ -85,6 +88,17 @@ class DatabaseManager:
         with self.get_session() as session:
             return list(session.execute(
                 select(EmailSource).where(EmailSource.active == True)
+            ).scalars().all())
+
+    def get_inactive_email_sources(self) -> List[EmailSource]:
+        """Get all inactive email sources from the database.
+        
+        Returns:
+            List[EmailSource]: A list of inactive email sources.
+        """
+        with self.get_session() as session:
+            return list(session.execute(
+                select(EmailSource).where(EmailSource.active == False)
             ).scalars().all())
 
     def update_email_source_status(self, email_address: str, active: bool) -> Optional[EmailSource]:
@@ -249,8 +263,12 @@ class DatabaseManager:
             logger.debug(f"Added parsed article: {parsed_article.title}")
             return parsed_article
     
-    def get_unparsed_emails(self) -> List[Email]:
+    def get_unparsed_emails(self, start_date: Optional[datetime] = None) -> List[Email]:
         """Get all emails that have not been parsed yet.
+        
+        Args:
+            start_date (Optional[datetime], optional): If provided, only return emails received
+                on or after this date. Defaults to None.
         
         Returns:
             List[Email]: A list of unparsed emails.
@@ -258,8 +276,16 @@ class DatabaseManager:
         with self.get_session() as session:
             # Query for emails that don't have any parsed articles
             query = select(Email).outerjoin(ParsedArticle).where(ParsedArticle.id == None)
+            
+            # Add date filter if provided
+            if start_date:
+                query = query.where(Email.received_date >= start_date)
+                
+            # Order by received date (oldest first)
+            query = query.order_by(Email.received_date)
+            
             return list(session.execute(query).scalars().all())
-    
+
     def is_email_parsed(self, email_id: int) -> bool:
         """Check if an email has been parsed.
         
@@ -289,3 +315,171 @@ class DatabaseManager:
             return list(session.execute(
                 select(DownloadLog).order_by(DownloadLog.timestamp.desc()).limit(limit)
             ).scalars().all())
+
+    def get_articles_by_date_range(
+        self, start_date: datetime, end_date: datetime, active_sources_only: bool = True
+    ) -> List[ParsedArticle]:
+        """Get articles by date range.
+        
+        Args:
+            start_date (datetime): Start date.
+            end_date (datetime): End date.
+            active_sources_only (bool, optional): Whether to only include articles from active sources.
+                Defaults to True.
+                
+        Returns:
+            List[ParsedArticle]: List of articles.
+        """
+        with self.get_session() as session:
+            query = select(ParsedArticle).where(
+                ParsedArticle.parsed_at >= start_date,
+                ParsedArticle.parsed_at <= end_date
+            )
+            
+            if active_sources_only:
+                # Join with Email and EmailSource to filter by active sources
+                query = query.join(Email, ParsedArticle.email_id == Email.id).join(
+                    EmailSource, Email.source_id == EmailSource.id
+                ).where(EmailSource.active == True)
+            
+            articles = session.execute(query).scalars().all()
+            return articles
+    
+    def add_article_group(
+        self, title: str, summary: str, article_ids: List[int], 
+        start_date: datetime, end_date: datetime, added_at: Optional[datetime] = None
+    ) -> ArticleGroup:
+        """Add an article group to the database.
+        
+        Args:
+            title (str): The title of the group.
+            summary (str): The summary of the group.
+            article_ids (List[int]): List of article IDs in the group.
+            start_date (datetime): Start date of the articles in the group.
+            end_date (datetime): End date of the articles in the group.
+            added_at (Optional[datetime], optional): When the group was added. Defaults to None.
+            
+        Returns:
+            ArticleGroup: The created article group.
+        """
+        with self.get_session() as session:
+            # Create the article group
+            article_group = ArticleGroup(
+                title=title,
+                summary=summary,
+                start_date=start_date,
+                end_date=end_date,
+                added_at=added_at or datetime.utcnow()
+            )
+            session.add(article_group)
+            session.flush()  # Flush to get the ID
+            
+            # Add the articles to the group
+            for article_id in article_ids:
+                article_group_item = ArticleGroupItem(
+                    article_group_id=article_group.id,
+                    article_id=article_id
+                )
+                session.add(article_group_item)
+            
+            session.commit()
+            session.refresh(article_group)
+            
+            logger.debug(f"Added article group: {title}")
+            return article_group
+    
+    def get_article_groups_by_date_range(
+        self, start_date: datetime, end_date: datetime
+    ) -> List[ArticleGroup]:
+        """Get article groups by date range.
+        
+        Args:
+            start_date (datetime): Start date.
+            end_date (datetime): End date.
+                
+        Returns:
+            List[ArticleGroup]: List of article groups.
+        """
+        with self.get_session() as session:
+            query = select(ArticleGroup).where(
+                ArticleGroup.start_date >= start_date,
+                ArticleGroup.end_date <= end_date
+            )
+            
+            article_groups = session.execute(query).scalars().all()
+            return article_groups
+    
+    def get_articles_in_group(self, group_id: int) -> List[ParsedArticle]:
+        """Get articles in a group.
+        
+        Args:
+            group_id (int): The ID of the group.
+                
+        Returns:
+            List[ParsedArticle]: List of articles in the group.
+        """
+        with self.get_session() as session:
+            query = select(ParsedArticle).join(
+                ArticleGroupItem, ParsedArticle.id == ArticleGroupItem.article_id
+            ).where(ArticleGroupItem.article_group_id == group_id)
+            
+            articles = session.execute(query).scalars().all()
+            return articles
+
+    def log_grouping(
+        self, duration_seconds: float, articles_processed: int, groups_created: int, 
+        sources_processed: int, articles_per_group: Optional[List[int]] = None,
+        error_message: Optional[str] = None
+    ) -> GroupingLog:
+        """Log a grouping operation.
+        
+        Args:
+            duration_seconds (float): The duration of the grouping operation in seconds.
+            articles_processed (int): The number of articles processed.
+            groups_created (int): The number of groups created.
+            sources_processed (int): The number of email sources processed.
+            articles_per_group (Optional[List[int]], optional): List of article counts per group.
+                Used to calculate statistics. Defaults to None.
+            error_message (Optional[str], optional): An error message, if any. Defaults to None.
+            
+        Returns:
+            GroupingLog: The created grouping log.
+        """
+        # Calculate statistics if articles_per_group is provided
+        avg_articles = None
+        median_articles = None
+        max_articles = None
+        min_articles = None
+        
+        if articles_per_group and len(articles_per_group) > 0:
+            avg_articles = sum(articles_per_group) / len(articles_per_group)
+            
+            # Calculate median
+            sorted_counts = sorted(articles_per_group)
+            mid = len(sorted_counts) // 2
+            if len(sorted_counts) % 2 == 0:
+                median_articles = (sorted_counts[mid - 1] + sorted_counts[mid]) / 2
+            else:
+                median_articles = sorted_counts[mid]
+            
+            max_articles = max(articles_per_group) if articles_per_group else None
+            min_articles = min(articles_per_group) if articles_per_group else None
+        
+        with self.get_session() as session:
+            grouping_log = GroupingLog(
+                duration_seconds=duration_seconds,
+                articles_processed=articles_processed,
+                sources_processed=sources_processed,
+                groups_created=groups_created,
+                average_articles_per_group=avg_articles,
+                median_articles_per_group=median_articles,
+                max_articles_per_group=max_articles,
+                min_articles_per_group=min_articles,
+                error_message=error_message,
+            )
+            session.add(grouping_log)
+            session.commit()
+            session.refresh(grouping_log)
+            
+            logger.info(f"Logged grouping: {groups_created} groups from {articles_processed} articles in {duration_seconds:.2f}s")
+            return grouping_log

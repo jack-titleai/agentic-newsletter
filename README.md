@@ -148,4 +148,85 @@ python scripts/migrate_parser_logs.py -v
 
 # Dry run (don't modify the database)
 python scripts/migrate_parser_logs.py --dry-run
+
+# Migrate grouping_logs and article_groups tables
+python scripts/migrate_grouping_logs.py
+
+# Run with verbose logging
+python scripts/migrate_grouping_logs.py -v
+
+# Dry run (don't modify the database)
+python scripts/migrate_grouping_logs.py --dry-run
 ```
+
+## Article Grouper
+
+The system includes an article grouper module that analyzes parsed articles and groups them by specific topics. This is useful for identifying similar articles across different newsletters.
+
+### Database Tables
+
+The article grouper adds two new tables to the database:
+
+1. `article_groups` - Stores information about groups of articles on the same topic
+2. `article_group_items` - Maps articles to groups (many-to-many relationship)
+
+### Grouping Articles
+
+To group articles by topic, use the `group_articles.py` script:
+
+```bash
+# Group articles from the last 7 days
+python scripts/group_articles.py
+
+# Group articles with verbose logging
+python scripts/group_articles.py -v
+
+# Group articles from a specific date range
+python scripts/group_articles.py --start-date 2025-03-14 --end-date 2025-03-21
+
+# Dry run (don't save to database)
+python scripts/group_articles.py --dry-run
+```
+
+### Example Usage
+
+See `examples/group_and_store.py` for an example of how to use the article grouper programmatically.
+
+## Email Source Sync
+
+To sync email sources from the config file, use the `sync_email_sources.py` script:
+
+```bash
+# Sync email sources from config file
+python scripts/sync_email_sources.py
+
+# Sync email sources with verbose logging
+python scripts/sync_email_sources.py -v
+
+# Dry run (don't modify the database)
+python scripts/sync_email_sources.py -d
+```
+
+## Email Download
+
+To download emails from all active sources, use the `download_from_sources.py` script:
+
+```bash
+# Download emails from all active sources
+python scripts/download_from_sources.py
+
+# Download emails with verbose logging
+python scripts/download_from_sources.py -v
+
+# Download emails with a maximum per source
+python scripts/download_from_sources.py -m 10
+
+# Force download of all emails, even if they already exist
+python scripts/download_from_sources.py -f
+
+# Download emails from specific sources
+python scripts/download_from_sources.py -s dan@tldrnewsletter.com -s thesequence@substack.com
+```
+
+## Email Parsing
+{{ ... }}

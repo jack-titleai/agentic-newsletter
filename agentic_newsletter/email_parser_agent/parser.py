@@ -29,15 +29,15 @@ class EmailParserAgent:
         self.logger = logging.getLogger(__name__)
     
     def parse_text(self, text: str) -> List[Article]:
-        """Parse text and extract articles.
+        """Parse text and extract AI-related articles.
         
         Args:
             text (str): The text to parse (e.g., email body).
             
         Returns:
-            List[Article]: List of extracted Article objects.
+            List[Article]: List of extracted AI-related Article objects.
         """
-        self.logger.info("Parsing text to extract articles")
+        self.logger.info("Parsing text to extract AI-related articles")
         
         # Get extraction result from OpenAI
         extraction_result = self.openai_client.extract_articles(text)
@@ -55,11 +55,11 @@ class EmailParserAgent:
                 )
                 articles.append(article)
         
-        self.logger.info(f"Extracted {len(articles)} articles from text")
+        self.logger.info(f"Extracted {len(articles)} AI-related articles from text")
         return articles
     
     def parse_email(self, email_body: str) -> List[Article]:
-        """Parse an email body and extract articles.
+        """Parse an email body and extract AI-related articles.
         
         This is an alias for parse_text, specifically for email bodies.
         
@@ -67,7 +67,7 @@ class EmailParserAgent:
             email_body (str): The email body to parse.
             
         Returns:
-            List[Article]: List of extracted Article objects.
+            List[Article]: List of extracted AI-related Article objects.
         """
         return self.parse_text(email_body)
     

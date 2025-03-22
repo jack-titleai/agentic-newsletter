@@ -75,6 +75,22 @@ class ConfigLoader:
         """
         return self.config["gmail"]["max_results_per_request"]
     
+    def get_email_sources(self) -> list[str]:
+        """Get the list of email sources from the config.
+        
+        Returns:
+            list[str]: List of email addresses to use as sources.
+        """
+        return self.config.get("email_sources", [])
+    
+    def get_article_categories(self) -> list[str]:
+        """Get the list of article categories from the config.
+        
+        Returns:
+            list[str]: List of article categories to filter by.
+        """
+        return self.config.get("article_categories", [])
+    
     @staticmethod
     def get_project_root() -> Path:
         """Get the project root directory.

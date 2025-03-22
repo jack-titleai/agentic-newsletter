@@ -88,30 +88,56 @@ class GmailClient:
         Args:
             sender_email (str): The sender's email address.
             max_results (Optional[int], optional): The maximum number of results to return.
-                Defaults to None, which uses the configured max_results.
+                If None, all available emails will be retrieved using pagination.
                 
         Returns:
             List[Dict[str, Any]]: A list of email messages.
         """
-        if max_results is None:
-            max_results = self.max_results
-        
         query = f"from:{sender_email}"
         
         try:
-            results = self.service.users().messages().list(
-                userId="me", q=query, maxResults=max_results
-            ).execute()
-            
-            messages = results.get("messages", [])
-            
-            # Get full message details for each message
             detailed_messages = []
-            for message in messages:
-                msg = self.service.users().messages().get(
-                    userId="me", id=message["id"], format="full"
+            page_token = None
+            
+            # If max_results is None, we'll retrieve all emails using pagination
+            # If max_results is specified, we'll limit to that number
+            remaining = max_results if max_results is not None else float('inf')
+            
+            while remaining > 0:
+                # Determine how many results to request in this page
+                page_size = min(self.max_results, remaining) if max_results is not None else self.max_results
+                
+                # Request messages
+                results = self.service.users().messages().list(
+                    userId="me", 
+                    q=query, 
+                    maxResults=page_size,
+                    pageToken=page_token
                 ).execute()
-                detailed_messages.append(msg)
+                
+                # Get messages from this page
+                messages = results.get("messages", [])
+                if not messages:
+                    break
+                
+                # Get full message details for each message
+                for message in messages:
+                    if len(detailed_messages) >= max_results if max_results is not None else False:
+                        break
+                    
+                    msg = self.service.users().messages().get(
+                        userId="me", id=message["id"], format="full"
+                    ).execute()
+                    detailed_messages.append(msg)
+                
+                # Update remaining count
+                if max_results is not None:
+                    remaining -= len(messages)
+                
+                # Get next page token
+                page_token = results.get("nextPageToken")
+                if not page_token:
+                    break
             
             return detailed_messages
         except Exception as e:

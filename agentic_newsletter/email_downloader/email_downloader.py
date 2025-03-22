@@ -53,12 +53,21 @@ class EmailDownloader:
         """
         return self.db_manager.get_active_email_sources()
 
-    def download_emails(self, max_per_source: Optional[int] = None) -> int:
+    def download_emails(
+        self, 
+        max_per_source: Optional[int] = None, 
+        force: bool = False,
+        specific_sources: Optional[List[EmailSource]] = None
+    ) -> int:
         """Download emails from all active email sources.
         
         Args:
             max_per_source (Optional[int], optional): The maximum number of emails to download per source.
                 Defaults to None, which uses the configured max_results.
+            force (bool, optional): Whether to force download of all emails, even if they already exist.
+                Defaults to False.
+            specific_sources (Optional[List[EmailSource]], optional): List of specific email sources to download from.
+                If None, download from all active sources. Defaults to None.
                 
         Returns:
             int: The total number of emails downloaded.
@@ -68,13 +77,13 @@ class EmailDownloader:
         error_message = None
         
         try:
-            # Get active email sources
-            sources = self.get_active_email_sources()
-            logger.info(f"Downloading emails from {len(sources)} active sources")
+            # Get active email sources if not specified
+            sources = specific_sources if specific_sources is not None else self.get_active_email_sources()
+            logger.info(f"Downloading emails from {len(sources)} sources")
             
             for source in sources:
                 # Download emails from this source
-                source_downloaded = self._download_emails_from_source(source, max_per_source)
+                source_downloaded = self._download_emails_from_source(source, max_per_source, force)
                 total_downloaded += source_downloaded
                 logger.info(f"Downloaded {source_downloaded} emails from {source.email_address}")
         except Exception as e:
@@ -90,22 +99,29 @@ class EmailDownloader:
         logger.info(f"Downloaded {total_downloaded} emails in {duration:.2f}s")
         return total_downloaded
 
-    def _download_emails_from_source(self, source: EmailSource, max_results: Optional[int] = None) -> int:
+    def _download_emails_from_source(
+        self, source: EmailSource, max_results: Optional[int] = None, force: bool = False
+    ) -> int:
         """Download emails from a specific source.
         
         Args:
             source (EmailSource): The email source to download from.
             max_results (Optional[int], optional): The maximum number of emails to download.
                 Defaults to None, which uses the configured max_results.
+            force (bool, optional): Whether to force download of all emails, even if they already exist.
+                Defaults to False.
                 
         Returns:
             int: The number of emails downloaded.
         """
         # Get emails from Gmail
+        logger.info(f"Retrieving emails from {source.email_address}...")
         messages = self.gmail_client.get_emails_from_sender(source.email_address, max_results)
+        logger.info(f"Found {len(messages)} emails from {source.email_address} in Gmail")
         
         # Count new emails
         new_emails = 0
+        skipped_emails = 0
         
         # Process each message
         for message in messages:
@@ -114,7 +130,8 @@ class EmailDownloader:
             
             # Check if the email already exists
             existing_email = self.db_manager.get_email_by_message_id(parsed_message["message_id"])
-            if existing_email:
+            if existing_email and not force:
+                skipped_emails += 1
                 continue
             
             # Add the email to the database
@@ -129,4 +146,5 @@ class EmailDownloader:
             
             new_emails += 1
         
+        logger.info(f"Downloaded {new_emails} new emails from {source.email_address} (skipped {skipped_emails} existing emails)")
         return new_emails
