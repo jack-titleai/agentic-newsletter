@@ -42,6 +42,9 @@ data/
 *.pkl
 *.txt
 
+# Config
+!agentic_newsletter/config/config.json
+
 # Google API
 credentials.json
 token.json

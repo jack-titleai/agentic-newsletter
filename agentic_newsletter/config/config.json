@@ -1,0 +1,58 @@
+{
+    "database": {
+        "path": "data/emails.db"
+    },
+    "gmail": {
+        "scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+        "token_file": "token.json",
+        "max_results_per_request": 500
+    },
+    "email_sources": [
+        "kaitchup@substack.com",
+        "futuretools@mail.beehiiv.com",
+        "dan@tldrnewsletter.com",
+        "news@daily.therundown.ai",
+        "news@thehustle.co",
+        "chinai@substack.com",
+        "codeconfessions@substack.com", 
+        "rob@innovatingwithai.com", 
+        "thebatch@deeplearning.ai", 
+        "exponentialview@substack.com", 
+        "crew@technews.therundown.ai", 
+        "superhuman@mail.joinsuperhuman.ai", 
+        "hi@robotics.therundown.ai", 
+        "theneuron@newsletter.theneurondaily.com", 
+        "editors@aggregage.com", 
+        "ainews@buttondown.email", 
+        "agentai@mail.beehiiv.com", 
+        "lastweekinai+podcast@substack.com", 
+        "sergeiai@substack.com", 
+        "aibreakfast@mail.beehiiv.com", 
+        "news@alphasignal.ai", 
+        "turingpost@mail.beehiiv.com", 
+        "importai@substack.com", 
+        "artificialintelligencemadesimple@substack.com", 
+        "hello@mindstream.news", 
+        "thesequence@substack.com", 
+        "bensbites@mail.bensbites.co"
+    ],
+    "article_categories": [
+        "artificial intelligence",
+        "machine learning",
+        "deep learning",
+        "computer vision", 
+        "healthcare analytics",
+        "healthcare technology",
+        "healthcare AI",
+        "large language models", 
+        "natural language processing", 
+        "model optimization", 
+        "predictive analytics", 
+        "hardware improvements", 
+        "GPU acceleration",
+        "AI strategy",
+        "robotics",
+        "MLOps",
+        "AI agents"
+    ]
+}
