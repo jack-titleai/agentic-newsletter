@@ -119,6 +119,7 @@ def group_articles(
                 print(f"Category: {group.title}")
                 print(f"  Articles: {article_count}")
                 print(f"  Summary: {group.summary}")
+                print(f"  Grouping Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
                 print()
     
     # Log the update to the database

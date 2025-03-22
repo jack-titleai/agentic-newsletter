@@ -23,6 +23,7 @@ class ParsedArticle(Base):
     url = Column(String(512), nullable=True)
     tags = Column(JSON, nullable=True)  # Store tags as JSON array
     assigned_category = Column(String(255), nullable=True)  # Category assigned by the grouper agent
+    grouping_datetime = Column(DateTime, nullable=True)  # When the article was assigned to a category
     parsed_at = Column(DateTime, nullable=False)
     added_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -74,5 +75,6 @@ class ParsedArticle(Base):
             url=article.url,
             tags=article.tags,
             assigned_category=None,  # Explicitly set to None for new articles
+            grouping_datetime=None,  # Explicitly set to None for new articles
             parsed_at=datetime.utcnow()
         )

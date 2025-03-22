@@ -354,13 +354,15 @@ class DatabaseManager:
         Args:
             article_categories (dict[int, str]): A dictionary mapping article IDs to their assigned categories.
         """
+        current_time = datetime.utcnow()
+        
         with self.get_session() as session:
             for article_id, category in article_categories.items():
-                # Update the article's assigned_category
+                # Update the article's assigned_category and grouping_datetime
                 session.execute(
                     update(ParsedArticle)
                     .where(ParsedArticle.id == article_id)
-                    .values(assigned_category=category)
+                    .values(assigned_category=category, grouping_datetime=current_time)
                 )
             
             session.commit()
@@ -385,7 +387,7 @@ class DatabaseManager:
                 ParsedArticle.assigned_category == category,
                 Email.received_date >= start_date,
                 Email.received_date <= end_date
-            )
+            ).order_by(ParsedArticle.grouping_datetime.desc())  # Order by grouping time, newest first
             
             articles = session.execute(query).scalars().all()
             return articles
