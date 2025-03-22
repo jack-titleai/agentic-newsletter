@@ -19,6 +19,7 @@ class BulletPoint(Base):
     frequency_score = Column(Float, nullable=False)
     impact_score = Column(Float, nullable=False)
     assigned_category = Column(String(255), nullable=False)
+    specificity_score = Column(Float, nullable=False)
     created_at = Column(DateTime, nullable=False)  # When the bullet point was generated
     added_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

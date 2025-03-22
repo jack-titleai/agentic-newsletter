@@ -140,7 +140,8 @@ class OpenAIClient:
                                 BulletPointData(
                                     bullet_point=item["bullet_point"],
                                     frequency_score=float(item["frequency_score"]),
-                                    impact_score=float(item["impact_score"])
+                                    impact_score=float(item["impact_score"]),
+                                    specificity_score=float(item["specificity_score"])
                                 )
                             )
                         except (KeyError, ValueError, TypeError) as e:

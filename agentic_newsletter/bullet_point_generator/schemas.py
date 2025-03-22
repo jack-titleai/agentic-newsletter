@@ -14,7 +14,7 @@ BULLET_POINT_SCHEMA = {
             "type": "array",
             "items": {
                 "type": "object",
-                "required": ["bullet_point", "frequency_score", "impact_score"],
+                "required": ["bullet_point", "frequency_score", "impact_score", "specificity_score"],
                 "additionalProperties": False,
                 "properties": {
                     "bullet_point": {
@@ -28,6 +28,10 @@ BULLET_POINT_SCHEMA = {
                     "impact_score": {
                         "type": "number",
                         "description": "Score from 1-10 indicating how impactful this topic is to the AI community"
+                    },
+                    "specificity_score": {
+                        "type": "number",
+                        "description": "Score from 1-10 indicating how specific and detailed the bullet point is"
                     }
                 }
             }
@@ -55,8 +59,14 @@ class BulletPointData(BaseModel):
         ge=1.0,
         le=10.0
     )
+    specificity_score: float = Field(
+        ..., 
+        description="Score from 1-10 indicating how specific and detailed the bullet point is",
+        ge=1.0,
+        le=10.0
+    )
     
-    @validator('frequency_score', 'impact_score')
+    @validator('frequency_score', 'impact_score', 'specificity_score')
     def validate_score(cls, v):
         """Validate that scores are between 1 and 10."""
         if v < 1 or v > 10:

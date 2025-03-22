@@ -453,35 +453,38 @@ class DatabaseManager:
     def add_bullet_point(
         self, 
         bullet_point: str, 
+        category: str, 
         frequency_score: float, 
         impact_score: float, 
-        assigned_category: str
+        specificity_score: float
     ) -> BulletPoint:
         """Add a bullet point to the database.
         
         Args:
             bullet_point (str): The bullet point text.
-            frequency_score (float): Score indicating how frequently this topic appears (1-10).
-            impact_score (float): Score indicating how impactful this topic is to the AI community (1-10).
-            assigned_category (str): The category this bullet point belongs to.
+            category (str): The category of the bullet point.
+            frequency_score (float): The frequency score of the bullet point.
+            impact_score (float): The impact score of the bullet point.
+            specificity_score (float): The specificity score of the bullet point.
             
         Returns:
-            BulletPoint: The created bullet point.
+            BulletPoint: The added bullet point.
         """
         with self.get_session() as session:
-            new_bullet_point = BulletPoint(
+            bullet_point_obj = BulletPoint(
                 bullet_point=bullet_point,
+                assigned_category=category,
                 frequency_score=frequency_score,
                 impact_score=impact_score,
-                assigned_category=assigned_category,
+                specificity_score=specificity_score,
                 created_at=datetime.utcnow()
             )
-            session.add(new_bullet_point)
+            session.add(bullet_point_obj)
             session.commit()
-            session.refresh(new_bullet_point)
+            session.refresh(bullet_point_obj)
             
-            logger.info(f"Added bullet point for category '{assigned_category}'")
-            return new_bullet_point
+            logger.info(f"Added bullet point for category '{category}'")
+            return bullet_point_obj
     
     def get_bullet_points_by_category(
         self, 

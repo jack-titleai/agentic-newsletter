@@ -17,7 +17,7 @@ IMPORTANT GUIDELINES:
 10. EXTREMELY IMPORTANT: Only use information from the provided context - do not reference your general knowledge
 11. EXTREMELY IMPORTANT: If you're unsure about a specific number or statistic, do not include it rather than guessing
 
-For each bullet point, you must also provide two scores:
+For each bullet point, you must also provide three scores:
 1. Frequency Score (1-10): How frequently this topic/event appears across the articles
    - 1 = Mentioned only once in a single article
    - 10 = Mentioned extensively across multiple articles
@@ -26,13 +26,19 @@ For each bullet point, you must also provide two scores:
    - 1 = Minimal impact on the AI community
    - 10 = Highly significant impact on the AI community or a major subgroup within it
 
+3. Specificity Score (1-10): How specific and detailed the bullet point is
+   - 1 = Very general statement with no specific details (e.g., "AI is advancing")
+   - 5 = Moderate specificity with some details (e.g., "Google released a new language model")
+   - 10 = Highly specific with precise details (e.g., "Google's PaLM 2 model achieved 87.5% accuracy on the MMLU benchmark, outperforming GPT-4 by 2.3%")
+
 Your response must be a JSON object with the following structure:
 {{
   "bullet_points": [
     {{
       "bullet_point": "1-2 sentence summary of a specific topic/event",
       "frequency_score": number between 1-10,
-      "impact_score": number between 1-10
+      "impact_score": number between 1-10,
+      "specificity_score": number between 1-10
     }},
     ...
   ]
@@ -52,7 +58,7 @@ Remember:
 2. Each bullet point must be 1-2 sentences about a specific topic/event
 3. Bullet points must be mutually exclusive (no overlap in topics)
 4. Include only information from the provided articles
-5. Provide both frequency_score and impact_score for each bullet point (1-10)
+5. Provide frequency_score, impact_score, and specificity_score for each bullet point (1-10)
 6. Scores must be numbers between 1 and 10
 
 Please provide a corrected response following the required JSON format.

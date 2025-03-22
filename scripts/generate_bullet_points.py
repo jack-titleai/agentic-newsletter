@@ -122,16 +122,16 @@ def generate_bullet_points(
             print(f"\nCategory: {category}")
             print(f"  Bullet Points: {len(result.bullet_points)}")
             
-            # Sort bullet points by impact score (highest first), then frequency score
+            # Sort bullet points by impact score (highest first), then frequency score, then specificity score
             sorted_bullet_points = sorted(
                 result.bullet_points, 
-                key=lambda bp: (bp.impact_score, bp.frequency_score), 
+                key=lambda bp: (bp.impact_score, bp.frequency_score, bp.specificity_score), 
                 reverse=True
             )
             
             for i, bp in enumerate(sorted_bullet_points, 1):
                 print(f"  {i}. {bp.bullet_point}")
-                print(f"     Impact: {bp.impact_score:.1f}, Frequency: {bp.frequency_score:.1f}")
+                print(f"     Impact: {bp.impact_score:.1f}, Frequency: {bp.frequency_score:.1f}, Specificity: {bp.specificity_score:.1f}")
 
 
 def main():

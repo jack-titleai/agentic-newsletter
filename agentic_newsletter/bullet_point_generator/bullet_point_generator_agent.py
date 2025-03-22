@@ -185,5 +185,6 @@ class BulletPointGeneratorAgent:
                 bullet_point=bullet_point_data.bullet_point,
                 frequency_score=bullet_point_data.frequency_score,
                 impact_score=bullet_point_data.impact_score,
+                specificity_score=bullet_point_data.specificity_score,
                 assigned_category=result.category
             )
