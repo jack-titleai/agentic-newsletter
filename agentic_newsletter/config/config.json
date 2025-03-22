@@ -37,22 +37,11 @@
         "bensbites@mail.bensbites.co"
     ],
     "article_categories": [
-        "artificial intelligence",
-        "machine learning",
-        "deep learning",
         "computer vision", 
-        "healthcare analytics",
-        "healthcare technology",
-        "healthcare AI",
-        "large language models", 
-        "natural language processing", 
-        "model optimization", 
-        "predictive analytics", 
-        "hardware improvements", 
-        "GPU acceleration",
-        "AI strategy",
-        "robotics",
-        "MLOps",
-        "AI agents"
+        "healthcare AI / healthcare analytics / healthcare technology",
+        "large language models and/or natural language processing", 
+        "hardware for AI and GPUs", 
+        "AI Policy",
+        "other topics"
     ]
 }

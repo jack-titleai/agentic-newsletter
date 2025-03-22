@@ -50,50 +50,15 @@ ARTICLE_GROUPING_SCHEMA = {
                 "properties": {
                     "title": {
                         "type": "string",
-                        "description": "A specific, descriptive title for the group."
+                        "description": "The title of the group, which must exactly match one of the predefined categories."
                     },
                     "summary": {
                         "type": "string",
-                        "description": "A summary of what unifies the articles in this group."
+                        "description": "A detailed summary (3-6 sentences) of what unifies the articles in this category."
                     },
                     "article_ids": {
                         "type": "array",
-                        "description": "List of article IDs that belong to this group. Each article must appear in exactly one group.",
-                        "items": {
-                            "type": "integer"
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-# JSON schema for group merging
-GROUP_MERGING_SCHEMA = {
-    "type": "object",
-    "required": ["groups"],
-    "additionalProperties": False,
-    "properties": {
-        "groups": {
-            "type": "array",
-            "description": "List of merged article groups. Each article must belong to exactly one group.",
-            "items": {
-                "type": "object",
-                "required": ["title", "summary", "article_ids"],
-                "additionalProperties": False,
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "A specific, descriptive title for the merged group."
-                    },
-                    "summary": {
-                        "type": "string",
-                        "description": "A summary of what unifies the articles in this merged group."
-                    },
-                    "article_ids": {
-                        "type": "array",
-                        "description": "List of article IDs that belong to this merged group. Each article must appear in exactly one group.",
+                        "description": "List of article IDs that belong to this group.",
                         "items": {
                             "type": "integer"
                         }
