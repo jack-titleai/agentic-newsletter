@@ -24,6 +24,7 @@ dependencies = [
     "SQLAlchemy>=2.0.0",
     "python-dotenv>=1.0.0",
     "openai>=1.10.0",
+    "numpy>=2.2.0",
 ]
 
 [project.optional-dependencies]

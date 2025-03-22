@@ -524,42 +524,114 @@ class DatabaseManager:
             return bullet_points
     
     def log_bullet_point_generation(
-        self, 
-        duration_seconds: float, 
-        categories_processed: int, 
+        self,
+        duration_seconds: float,
+        categories_processed: int,
         bullet_points_generated: int,
-        articles_processed: int = 0,
-        error_message: Optional[str] = None
+        articles_processed: int,
+        error_message: Optional[str] = None,
+        category_metrics: Optional[Dict[str, Dict]] = None,
+        avg_frequency_score: Optional[float] = None,
+        std_frequency_score: Optional[float] = None,
+        avg_impact_score: Optional[float] = None,
+        std_impact_score: Optional[float] = None,
+        avg_specificity_score: Optional[float] = None,
+        std_specificity_score: Optional[float] = None,
+        urls_found: Optional[int] = None
     ) -> BulletPointLog:
-        """Log a bullet point generation operation.
+        """Log a bullet point generation run.
         
         Args:
-            duration_seconds (float): The duration of the operation in seconds.
-            categories_processed (int): The number of categories processed.
-            bullet_points_generated (int): The number of bullet points generated.
-            articles_processed (int, optional): The number of articles processed. Defaults to 0.
-            error_message (Optional[str], optional): An error message, if any. Defaults to None.
+            duration_seconds: Duration of the bullet point generation in seconds.
+            categories_processed: Number of categories processed.
+            bullet_points_generated: Number of bullet points generated.
+            articles_processed: Number of articles processed.
+            error_message: Error message if an error occurred.
+            category_metrics: Dictionary of metrics per category.
+            avg_frequency_score: Average frequency score across all bullet points.
+            std_frequency_score: Standard deviation of frequency scores.
+            avg_impact_score: Average impact score across all bullet points.
+            std_impact_score: Standard deviation of impact scores.
+            avg_specificity_score: Average specificity score across all bullet points.
+            std_specificity_score: Standard deviation of specificity scores.
+            urls_found: Number of URLs found in bullet points.
             
         Returns:
-            BulletPointLog: The created log entry.
+            BulletPointLog: The added bullet point log.
+        """
+        return self.add_bullet_point_log(
+            duration_seconds=duration_seconds,
+            categories_processed=categories_processed,
+            bullet_points_generated=bullet_points_generated,
+            articles_processed=articles_processed,
+            error_message=error_message,
+            category_metrics=category_metrics,
+            avg_frequency_score=avg_frequency_score,
+            std_frequency_score=std_frequency_score,
+            avg_impact_score=avg_impact_score,
+            std_impact_score=std_impact_score,
+            avg_specificity_score=avg_specificity_score,
+            std_specificity_score=std_specificity_score,
+            urls_found=urls_found
+        )
+    
+    def add_bullet_point_log(
+        self,
+        duration_seconds: float,
+        categories_processed: int,
+        bullet_points_generated: int,
+        articles_processed: int,
+        category_metrics: Optional[Dict[str, Dict]] = None,
+        avg_frequency_score: Optional[float] = None,
+        std_frequency_score: Optional[float] = None,
+        avg_impact_score: Optional[float] = None,
+        std_impact_score: Optional[float] = None,
+        avg_specificity_score: Optional[float] = None,
+        std_specificity_score: Optional[float] = None,
+        urls_found: Optional[int] = None,
+        error_message: Optional[str] = None
+    ) -> BulletPointLog:
+        """Add a bullet point log to the database.
+        
+        Args:
+            duration_seconds: Duration of the bullet point generation in seconds.
+            categories_processed: Number of categories processed.
+            bullet_points_generated: Number of bullet points generated.
+            articles_processed: Number of articles processed.
+            category_metrics: Dictionary of metrics per category.
+            avg_frequency_score: Average frequency score across all bullet points.
+            std_frequency_score: Standard deviation of frequency scores.
+            avg_impact_score: Average impact score across all bullet points.
+            std_impact_score: Standard deviation of impact scores.
+            avg_specificity_score: Average specificity score across all bullet points.
+            std_specificity_score: Standard deviation of specificity scores.
+            urls_found: Number of URLs found in bullet points.
+            error_message: Error message if an error occurred.
+            
+        Returns:
+            BulletPointLog: The added bullet point log.
         """
         with self.get_session() as session:
-            bullet_point_log = BulletPointLog(
+            log = BulletPointLog(
                 duration_seconds=duration_seconds,
                 categories_processed=categories_processed,
                 bullet_points_generated=bullet_points_generated,
                 articles_processed=articles_processed,
-                error_message=error_message,
+                avg_frequency_score=avg_frequency_score,
+                std_frequency_score=std_frequency_score,
+                avg_impact_score=avg_impact_score,
+                std_impact_score=std_impact_score,
+                avg_specificity_score=avg_specificity_score,
+                std_specificity_score=std_specificity_score,
+                urls_found=urls_found,
+                error_message=error_message
             )
-            session.add(bullet_point_log)
-            session.commit()
-            session.refresh(bullet_point_log)
             
-            logger.info(
-                f"Bullet point generation completed: {bullet_points_generated} bullet points "
-                f"from {categories_processed} categories in {duration_seconds:.2f}s"
-            )
-            if error_message:
-                logger.error(f"Error during bullet point generation: {error_message}")
+            if category_metrics:
+                log.set_category_metrics(category_metrics)
                 
-            return bullet_point_log
+            session.add(log)
+            session.commit()
+            session.refresh(log)
+            
+            return log
