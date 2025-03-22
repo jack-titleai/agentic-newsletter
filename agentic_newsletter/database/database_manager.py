@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from agentic_newsletter.config.config_loader import ConfigLoader
 from agentic_newsletter.database import (
     Base, DownloadLog, Email, EmailSource, 
-    GroupingLog, ParsedArticle, ParserLog
+    GroupingLog, ParsedArticle, ParserLog, BulletPoint, BulletPointLog
 )
 from agentic_newsletter.email_parser_agent.article import Article
 
@@ -449,3 +449,108 @@ class DatabaseManager:
             
             logger.info(f"Logged grouping: {categories_used} categories from {articles_processed} articles in {duration_seconds:.2f}s")
             return grouping_log
+    
+    def add_bullet_point(
+        self, 
+        bullet_point: str, 
+        frequency_score: float, 
+        impact_score: float, 
+        assigned_category: str
+    ) -> BulletPoint:
+        """Add a bullet point to the database.
+        
+        Args:
+            bullet_point (str): The bullet point text.
+            frequency_score (float): Score indicating how frequently this topic appears (1-10).
+            impact_score (float): Score indicating how impactful this topic is to the AI community (1-10).
+            assigned_category (str): The category this bullet point belongs to.
+            
+        Returns:
+            BulletPoint: The created bullet point.
+        """
+        with self.get_session() as session:
+            new_bullet_point = BulletPoint(
+                bullet_point=bullet_point,
+                frequency_score=frequency_score,
+                impact_score=impact_score,
+                assigned_category=assigned_category,
+                created_at=datetime.utcnow()
+            )
+            session.add(new_bullet_point)
+            session.commit()
+            session.refresh(new_bullet_point)
+            
+            logger.info(f"Added bullet point for category '{assigned_category}'")
+            return new_bullet_point
+    
+    def get_bullet_points_by_category(
+        self, 
+        category: str, 
+        start_date: Optional[datetime] = None, 
+        end_date: Optional[datetime] = None
+    ) -> List[BulletPoint]:
+        """Get bullet points for a specific category within a date range.
+        
+        Args:
+            category (str): The category to filter by.
+            start_date (Optional[datetime], optional): Start date for created_at. Defaults to None.
+            end_date (Optional[datetime], optional): End date for created_at. Defaults to None.
+                
+        Returns:
+            List[BulletPoint]: List of bullet points for the specified category.
+        """
+        with self.get_session() as session:
+            query = select(BulletPoint).where(BulletPoint.assigned_category == category)
+            
+            if start_date:
+                query = query.where(BulletPoint.created_at >= start_date)
+            
+            if end_date:
+                query = query.where(BulletPoint.created_at <= end_date)
+            
+            # Order by impact score (highest first), then frequency score
+            query = query.order_by(BulletPoint.impact_score.desc(), BulletPoint.frequency_score.desc())
+            
+            bullet_points = session.execute(query).scalars().all()
+            return bullet_points
+    
+    def log_bullet_point_generation(
+        self, 
+        duration_seconds: float, 
+        categories_processed: int, 
+        bullet_points_generated: int,
+        articles_processed: int = 0,
+        error_message: Optional[str] = None
+    ) -> BulletPointLog:
+        """Log a bullet point generation operation.
+        
+        Args:
+            duration_seconds (float): The duration of the operation in seconds.
+            categories_processed (int): The number of categories processed.
+            bullet_points_generated (int): The number of bullet points generated.
+            articles_processed (int, optional): The number of articles processed. Defaults to 0.
+            error_message (Optional[str], optional): An error message, if any. Defaults to None.
+            
+        Returns:
+            BulletPointLog: The created log entry.
+        """
+        with self.get_session() as session:
+            bullet_point_log = BulletPointLog(
+                duration_seconds=duration_seconds,
+                categories_processed=categories_processed,
+                bullet_points_generated=bullet_points_generated,
+                articles_processed=articles_processed,
+                error_message=error_message,
+            )
+            session.add(bullet_point_log)
+            session.commit()
+            session.refresh(bullet_point_log)
+            
+            logger.info(
+                f"Bullet point generation completed: {bullet_points_generated} bullet points "
+                f"from {categories_processed} categories in {duration_seconds:.2f}s"
+            )
+            if error_message:
+                logger.error(f"Error during bullet point generation: {error_message}")
+                
+            return bullet_point_log
