@@ -47,7 +47,7 @@ class ArticleGrouperAgent:
                 id=article.id,
                 title=article.title,
                 summary=article.summary,
-                source=article.source,
+                source=article.sender,
                 parsed_at=article.parsed_at
             ))
         

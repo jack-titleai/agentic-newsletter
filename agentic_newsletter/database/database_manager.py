@@ -319,26 +319,29 @@ class DatabaseManager:
     def get_articles_by_date_range(
         self, start_date: datetime, end_date: datetime, active_sources_only: bool = True
     ) -> List[ParsedArticle]:
-        """Get articles by date range.
+        """Get articles by date range of the source emails.
         
         Args:
-            start_date (datetime): Start date.
-            end_date (datetime): End date.
+            start_date (datetime): Start date for email received_date.
+            end_date (datetime): End date for email received_date.
             active_sources_only (bool, optional): Whether to only include articles from active sources.
                 Defaults to True.
                 
         Returns:
-            List[ParsedArticle]: List of articles.
+            List[ParsedArticle]: List of articles from emails received within the specified date range.
         """
         with self.get_session() as session:
-            query = select(ParsedArticle).where(
-                ParsedArticle.parsed_at >= start_date,
-                ParsedArticle.parsed_at <= end_date
+            # Join with Email to filter by email's received_date date
+            query = select(ParsedArticle).join(
+                Email, ParsedArticle.email_id == Email.id
+            ).where(
+                Email.received_date >= start_date,
+                Email.received_date <= end_date
             )
             
             if active_sources_only:
-                # Join with Email and EmailSource to filter by active sources
-                query = query.join(Email, ParsedArticle.email_id == Email.id).join(
+                # Join with EmailSource to filter by active sources
+                query = query.join(
                     EmailSource, Email.source_id == EmailSource.id
                 ).where(EmailSource.active == True)
             

@@ -59,14 +59,34 @@ class OpenAIClient:
         # Send the request to OpenAI
         logger.debug(f"Sending request to OpenAI API using model {self.model}")
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": prompt},
-                ],
-                response_format={"type": "json_schema", "schema": ARTICLE_GROUPING_SCHEMA},
-                temperature=0.2,
-            )
+            # Try with json_schema format first
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                    ],
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "article_grouping",
+                            "schema": ARTICLE_GROUPING_SCHEMA,
+                            "strict": True
+                        }
+                    },
+                    temperature=0.2,
+                )
+            except Exception as e:
+                # If json_schema format fails, fall back to basic json_object format
+                logger.warning(f"Failed to use json_schema format: {e}. Falling back to json_object format.")
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.2,
+                )
             
             logger.debug("Received response from OpenAI API")
             

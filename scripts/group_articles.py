@@ -85,7 +85,7 @@ def group_articles(
     # Count the number of unique sources
     sources = set()
     for article in articles:
-        sources.add(article.source)
+        sources.add(article.sender)
     
     logging.info(f"Articles come from {len(sources)} unique sources.")
     
