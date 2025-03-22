@@ -34,72 +34,72 @@ class ArticleGroupResult:
     end_date: datetime
 
 
-# JSON Schema for the OpenAI API
+# JSON schema for article grouping
 ARTICLE_GROUPING_SCHEMA = {
     "type": "object",
     "required": ["groups"],
+    "additionalProperties": False,
     "properties": {
         "groups": {
             "type": "array",
-            "description": "List of article groups. Each article must be assigned to exactly one group.",
+            "description": "List of article groups. Each article must belong to exactly one group.",
             "items": {
                 "type": "object",
                 "required": ["title", "summary", "article_ids"],
+                "additionalProperties": False,
                 "properties": {
                     "title": {
                         "type": "string",
-                        "description": "A highly specific, descriptive title for the group that includes company names, product names, or event details. Avoid general categories like 'AI in Healthcare' - instead use specific titles like 'Google's Gemini AI Model for Japanese Hospitals'."
+                        "description": "A specific, descriptive title for the group."
                     },
                     "summary": {
                         "type": "string",
-                        "description": "A 1-3 sentence summary that explains the specific topic, event, or announcement shared by these articles. Include specific details when available."
+                        "description": "A summary of what unifies the articles in this group."
                     },
                     "article_ids": {
                         "type": "array",
-                        "description": "List of article IDs in this group. Each article ID should appear in exactly one group.",
+                        "description": "List of article IDs that belong to this group. Each article must appear in exactly one group.",
                         "items": {
                             "type": "integer"
                         }
                     }
-                },
-                "additionalProperties": False
+                }
             }
         }
-    },
-    "additionalProperties": False
+    }
 }
 
-# JSON Schema for the group merging process
+# JSON schema for group merging
 GROUP_MERGING_SCHEMA = {
     "type": "object",
     "required": ["groups"],
+    "additionalProperties": False,
     "properties": {
         "groups": {
             "type": "array",
-            "description": "List of merged article groups. Each article must be assigned to exactly one group.",
+            "description": "List of merged article groups. Each article must belong to exactly one group.",
             "items": {
                 "type": "object",
                 "required": ["title", "summary", "article_ids"],
+                "additionalProperties": False,
                 "properties": {
                     "title": {
                         "type": "string",
-                        "description": "A specific but comprehensive title for the merged group that captures the broader topic while still being descriptive. Include company names and key details."
+                        "description": "A specific, descriptive title for the merged group."
                     },
                     "summary": {
                         "type": "string",
-                        "description": "A comprehensive summary that incorporates the key points from all merged groups. Should explain the broader topic while maintaining specific details."
+                        "description": "A summary of what unifies the articles in this merged group."
                     },
                     "article_ids": {
                         "type": "array",
-                        "description": "List of all article IDs from the merged groups. Each article ID should appear in exactly one group after merging.",
+                        "description": "List of article IDs that belong to this merged group. Each article must appear in exactly one group.",
                         "items": {
                             "type": "integer"
                         }
                     }
-                },
-                "additionalProperties": False
+                }
             }
         }
-    },
-    "additionalProperties": False
+    }
 }

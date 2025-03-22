@@ -40,103 +40,84 @@ class OpenAIClient:
         self.retry_delay = retry_delay
     
     def group_articles(self, articles: List[ArticleData]) -> ArticleGroupResult:
-        """Group articles by topic using the OpenAI API.
+        """Group articles by topic.
         
         Args:
             articles (List[ArticleData]): List of articles to group.
             
         Returns:
             ArticleGroupResult: Result of the grouping process.
-            
-        Raises:
-            Exception: If there's an error grouping articles after max_retries attempts.
         """
         if not articles:
             logger.warning("No articles provided for grouping")
             return ArticleGroupResult(groups=[], start_date=None, end_date=None)
         
-        # Convert ArticleData objects to dictionaries
-        article_data = []
-        for article in articles:
-            article_data.append({
-                "id": article.id,
-                "title": article.title,
-                "summary": article.summary,
-                "source": article.source
-            })
+        # Prepare the input for the OpenAI API
+        article_json = json.dumps([{
+            "id": article.id,
+            "title": article.title,
+            "summary": article.summary,
+            "source": article.source
+        } for article in articles])
         
-        # Create the prompt
-        prompt = ARTICLE_GROUPING_PROMPT.format(articles=json.dumps(article_data, indent=2))
+        # Prepare the messages for the chat completion
+        messages = [
+            {"role": "system", "content": ARTICLE_GROUPING_PROMPT},
+            {"role": "user", "content": f"Here are the articles to group:\n\n{article_json}"}
+        ]
         
-        # Send the request to OpenAI with retry logic
-        attempts = 0
-        last_error = None
-        backoff_time = self.retry_delay  # Start with the base delay
+        # Use the schema format if possible, otherwise fall back to json_object
+        use_schema_format = True
         
-        while attempts < self.max_retries:
-            attempts += 1
+        # Get the start and end dates
+        dates = [article.parsed_at for article in articles if article.parsed_at]
+        start_date = min(dates) if dates else None
+        end_date = max(dates) if dates else None
+        
+        # Try to get a response from the OpenAI API with retries
+        for attempt in range(1, self.max_retries + 1):
             try:
-                logger.debug(f"Attempt {attempts}/{self.max_retries}: Sending request to OpenAI API using model {self.model}")
-                
-                # Try with json_schema format first
-                try:
-                    response = self.client.chat.completions.create(
-                        model=self.model,
-                        messages=[
-                            {"role": "system", "content": prompt},
-                        ],
-                        response_format={
-                            "type": "json_schema",
-                            "json_schema": {
-                                "name": "article_grouping",
-                                "schema": ARTICLE_GROUPING_SCHEMA,
-                                "strict": True
-                            }
-                        },
-                        temperature=0.2,
-                    )
-                except openai.RateLimitError as e:
-                    # Handle rate limit errors with exponential backoff
-                    last_error = f"Rate limit exceeded: {e}"
-                    logger.warning(f"Rate limit error: {e}")
-                    if attempts < self.max_retries:
-                        logger.info(f"Rate limited. Backing off for {backoff_time} seconds... (Attempt {attempts}/{self.max_retries})")
-                        time.sleep(backoff_time)
-                        # Exponential backoff: double the wait time for the next attempt
-                        backoff_time *= 2
+                if use_schema_format:
+                    try:
+                        response = self.client.chat.completions.create(
+                            model=self.model,
+                            messages=messages,
+                            response_format={
+                                "type": "json_schema",
+                                "json_schema": {
+                                    "name": "article_grouping",
+                                    "schema": ARTICLE_GROUPING_SCHEMA,
+                                    "strict": True
+                                }
+                            },
+                            temperature=0.05,  # Lower temperature for more deterministic results
+                        )
+                    except openai.BadRequestError as e:
+                        logger.warning(f"Failed to use json_schema format: Error code: {e.status_code} - {e}. Falling back to json_object format.")
+                        use_schema_format = False
                         continue
-                    else:
-                        raise Exception(last_error)
-                except Exception as e:
-                    # If json_schema format fails, fall back to basic json_object format
-                    logger.warning(f"Failed to use json_schema format: {e}. Falling back to json_object format.")
+                else:
                     response = self.client.chat.completions.create(
                         model=self.model,
-                        messages=[
-                            {"role": "system", "content": prompt},
-                        ],
+                        messages=messages,
                         response_format={"type": "json_object"},
-                        temperature=0.2,
+                        temperature=0.05,  # Lower temperature for more deterministic results
                     )
                 
                 logger.debug("Received response from OpenAI API")
                 
                 # Parse the response
                 response_content = response.choices[0].message.content
-                response_json = json.loads(response_content)
+                result = json.loads(response_content)
                 
                 # Convert the response to ArticleGroupData objects
                 groups = []
-                for group in response_json.get("groups", []):
+                for group in result.get("groups", []):
                     groups.append(ArticleGroupData(
                         title=group.get("title", ""),
                         summary=group.get("summary", ""),
                         article_ids=group.get("article_ids", [])
                     ))
-                
-                # Get the earliest and latest parsed_at dates
-                start_date = min(article.parsed_at for article in articles) if articles else None
-                end_date = max(article.parsed_at for article in articles) if articles else None
                 
                 return ArticleGroupResult(
                     groups=groups,
@@ -145,106 +126,85 @@ class OpenAIClient:
                 )
                 
             except Exception as e:
-                last_error = str(e)
-                logger.warning(f"Error in attempt {attempts}/{self.max_retries}: {last_error}")
+                logger.warning(f"Error in attempt {attempt}/{self.max_retries}: {e}")
                 
-                if attempts < self.max_retries:
-                    logger.info(f"Retrying in {backoff_time} seconds...")
-                    time.sleep(backoff_time)
+                if attempt < self.max_retries:
+                    logger.info(f"Retrying in {self.retry_delay} seconds...")
+                    time.sleep(self.retry_delay)
                     # Exponential backoff: double the wait time for the next attempt
-                    backoff_time *= 2
+                    self.retry_delay *= 2
                 else:
-                    logger.error(f"Failed after {self.max_retries} attempts. Last error: {last_error}")
-                    raise Exception(f"Error grouping articles: {last_error}")
+                    logger.error(f"Failed after {self.max_retries} attempts. Last error: {e}")
+                    raise Exception(f"Error grouping articles: {e}")
     
-    def merge_groups(self, group_result: ArticleGroupResult) -> ArticleGroupResult:
-        """Merge similar groups using the OpenAI API.
+    def merge_groups(self, initial_result: ArticleGroupResult) -> ArticleGroupResult:
+        """Merge similar groups from the initial grouping.
         
         Args:
-            group_result (ArticleGroupResult): Initial grouping result to merge.
+            initial_result (ArticleGroupResult): Result of the initial grouping process.
             
         Returns:
-            ArticleGroupResult: Result of the merging process with consolidated groups.
-            
-        Raises:
-            Exception: If there's an error merging groups after max_retries attempts.
+            ArticleGroupResult: Result of the merging process.
         """
-        if not group_result.groups:
+        if not initial_result.groups:
             logger.warning("No groups provided for merging")
-            return group_result
+            return initial_result
         
-        # Convert ArticleGroupData objects to dictionaries
-        group_data = []
-        for group in group_result.groups:
-            group_data.append({
-                "title": group.title,
-                "summary": group.summary,
-                "article_ids": group.article_ids
-            })
+        # Prepare the input for the OpenAI API
+        groups_json = json.dumps([{
+            "title": group.title,
+            "summary": group.summary,
+            "article_ids": group.article_ids
+        } for group in initial_result.groups])
         
-        # Create the prompt
-        prompt = GROUP_MERGING_PROMPT.format(groups=json.dumps(group_data, indent=2))
+        # Prepare the messages for the chat completion
+        messages = [
+            {"role": "system", "content": GROUP_MERGING_PROMPT},
+            {"role": "user", "content": f"Here are the groups to merge:\n\n{groups_json}"}
+        ]
         
-        # Send the request to OpenAI with retry logic
-        attempts = 0
-        last_error = None
-        backoff_time = self.retry_delay  # Start with the base delay
+        # Use the schema format if possible, otherwise fall back to json_object
+        use_schema_format = True
         
-        while attempts < self.max_retries:
-            attempts += 1
+        # Try to get a response from the OpenAI API with retries
+        for attempt in range(1, self.max_retries + 1):
             try:
-                logger.debug(f"Attempt {attempts}/{self.max_retries}: Sending request to OpenAI API for group merging using model {self.model}")
-                
-                # Try with json_schema format first
-                try:
-                    response = self.client.chat.completions.create(
-                        model=self.model,
-                        messages=[
-                            {"role": "system", "content": prompt},
-                        ],
-                        response_format={
-                            "type": "json_schema",
-                            "json_schema": {
-                                "name": "group_merging",
-                                "schema": GROUP_MERGING_SCHEMA,
-                                "strict": True
-                            }
-                        },
-                        temperature=0.2,
-                    )
-                except openai.RateLimitError as e:
-                    # Handle rate limit errors with exponential backoff
-                    last_error = f"Rate limit exceeded: {e}"
-                    logger.warning(f"Rate limit error: {e}")
-                    if attempts < self.max_retries:
-                        logger.info(f"Rate limited. Backing off for {backoff_time} seconds... (Attempt {attempts}/{self.max_retries})")
-                        time.sleep(backoff_time)
-                        # Exponential backoff: double the wait time for the next attempt
-                        backoff_time *= 2
+                if use_schema_format:
+                    try:
+                        response = self.client.chat.completions.create(
+                            model=self.model,
+                            messages=messages,
+                            response_format={
+                                "type": "json_schema",
+                                "json_schema": {
+                                    "name": "group_merging",
+                                    "schema": GROUP_MERGING_SCHEMA,
+                                    "strict": True
+                                }
+                            },
+                            temperature=0.05,  # Lower temperature for more deterministic results
+                        )
+                    except openai.BadRequestError as e:
+                        logger.warning(f"Failed to use json_schema format for merging: Error code: {e.status_code} - {e}. Falling back to json_object format.")
+                        use_schema_format = False
                         continue
-                    else:
-                        raise Exception(last_error)
-                except Exception as e:
-                    # If json_schema format fails, fall back to basic json_object format
-                    logger.warning(f"Failed to use json_schema format for merging: {e}. Falling back to json_object format.")
+                else:
                     response = self.client.chat.completions.create(
                         model=self.model,
-                        messages=[
-                            {"role": "system", "content": prompt},
-                        ],
+                        messages=messages,
                         response_format={"type": "json_object"},
-                        temperature=0.2,
+                        temperature=0.05,  # Lower temperature for more deterministic results
                     )
                 
                 logger.debug("Received response from OpenAI API for group merging")
                 
                 # Parse the response
                 response_content = response.choices[0].message.content
-                response_json = json.loads(response_content)
+                result = json.loads(response_content)
                 
                 # Convert the response to ArticleGroupData objects
                 merged_groups = []
-                for group in response_json.get("groups", []):
+                for group in result.get("groups", []):
                     merged_groups.append(ArticleGroupData(
                         title=group.get("title", ""),
                         summary=group.get("summary", ""),
@@ -253,19 +213,18 @@ class OpenAIClient:
                 
                 return ArticleGroupResult(
                     groups=merged_groups,
-                    start_date=group_result.start_date,
-                    end_date=group_result.end_date
+                    start_date=initial_result.start_date,
+                    end_date=initial_result.end_date
                 )
                 
             except Exception as e:
-                last_error = str(e)
-                logger.warning(f"Error in attempt {attempts}/{self.max_retries}: {last_error}")
+                logger.warning(f"Error in attempt {attempt}/{self.max_retries}: {e}")
                 
-                if attempts < self.max_retries:
-                    logger.info(f"Retrying in {backoff_time} seconds...")
-                    time.sleep(backoff_time)
+                if attempt < self.max_retries:
+                    logger.info(f"Retrying in {self.retry_delay} seconds...")
+                    time.sleep(self.retry_delay)
                     # Exponential backoff: double the wait time for the next attempt
-                    backoff_time *= 2
+                    self.retry_delay *= 2
                 else:
-                    logger.error(f"Failed after {self.max_retries} attempts. Last error: {last_error}")
-                    raise Exception(f"Error merging groups: {last_error}")
+                    logger.error(f"Failed after {self.max_retries} attempts. Last error: {e}")
+                    raise Exception(f"Error merging groups: {e}")
