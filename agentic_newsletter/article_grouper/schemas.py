@@ -41,7 +41,7 @@ ARTICLE_GROUPING_SCHEMA = {
     "properties": {
         "groups": {
             "type": "array",
-            "description": "List of article groups",
+            "description": "List of article groups. Each article must be assigned to exactly one group.",
             "items": {
                 "type": "object",
                 "required": ["title", "summary", "article_ids"],
@@ -56,13 +56,50 @@ ARTICLE_GROUPING_SCHEMA = {
                     },
                     "article_ids": {
                         "type": "array",
-                        "description": "List of article IDs in this group",
+                        "description": "List of article IDs in this group. Each article ID should appear in exactly one group.",
                         "items": {
                             "type": "integer"
                         }
                     }
-                }
+                },
+                "additionalProperties": False
             }
         }
-    }
+    },
+    "additionalProperties": False
+}
+
+# JSON Schema for the group merging process
+GROUP_MERGING_SCHEMA = {
+    "type": "object",
+    "required": ["groups"],
+    "properties": {
+        "groups": {
+            "type": "array",
+            "description": "List of merged article groups. Each article must be assigned to exactly one group.",
+            "items": {
+                "type": "object",
+                "required": ["title", "summary", "article_ids"],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "A specific but comprehensive title for the merged group that captures the broader topic while still being descriptive. Include company names and key details."
+                    },
+                    "summary": {
+                        "type": "string",
+                        "description": "A comprehensive summary that incorporates the key points from all merged groups. Should explain the broader topic while maintaining specific details."
+                    },
+                    "article_ids": {
+                        "type": "array",
+                        "description": "List of all article IDs from the merged groups. Each article ID should appear in exactly one group after merging.",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "additionalProperties": False
+            }
+        }
+    },
+    "additionalProperties": False
 }

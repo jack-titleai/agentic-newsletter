@@ -53,7 +53,8 @@ def group_articles(
     grouper: ArticleGrouperAgent,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    merge_groups: bool = True
 ) -> None:
     """Group articles by topic.
     
@@ -64,6 +65,8 @@ def group_articles(
         end_date (Optional[datetime], optional): End date. Defaults to now.
         dry_run (bool, optional): If True, don't actually add groups to the database.
             Defaults to False.
+        merge_groups (bool, optional): If True, perform the second stage of merging similar groups.
+            Defaults to True.
     """
     # Set default dates if not provided
     if end_date is None:
@@ -94,10 +97,18 @@ def group_articles(
     articles_per_group = []
     start_time = time.time()
     try:
-        result = grouper.group_articles(articles)
+        result = grouper.group_articles(articles, merge_groups=merge_groups)
         duration = time.time() - start_time
         
-        logging.info(f"Created {len(result.groups)} groups in {duration:.2f} seconds.")
+        # Get the initial and merged group counts from the agent's logs
+        initial_group_count = getattr(grouper, 'initial_group_count', 0)
+        merged_group_count = len(result.groups)
+        
+        # Print group counts
+        if merge_groups and initial_group_count > 0:
+            logging.info(f"Created {initial_group_count} initial groups and merged to {merged_group_count} final groups in {duration:.2f} seconds.")
+        else:
+            logging.info(f"Created {len(result.groups)} groups in {duration:.2f} seconds.")
         
         # Calculate articles per group
         for group in result.groups:
@@ -156,6 +167,9 @@ def main() -> None:
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable verbose logging"
     )
+    parser.add_argument(
+        "--no-merge", action="store_true", help="Skip the group merging stage (use only the initial specific groups)"
+    )
     args = parser.parse_args()
     
     # Set up logging
@@ -175,7 +189,14 @@ def main() -> None:
     grouper = ArticleGrouperAgent()
     
     # Group articles
-    group_articles(db_manager, grouper, start_date, end_date, args.dry_run)
+    group_articles(
+        db_manager, 
+        grouper, 
+        start_date, 
+        end_date, 
+        args.dry_run,
+        merge_groups=not args.no_merge
+    )
 
 
 if __name__ == "__main__":

@@ -21,15 +21,18 @@ class ArticleGrouperAgent:
             openai_client (Optional[OpenAIClient], optional): OpenAI client. Defaults to None.
         """
         self.openai_client = openai_client or OpenAIClient()
+        self.initial_group_count = 0
     
     def group_articles(
         self, 
         articles: List[ParsedArticle],
+        merge_groups: bool = True
     ) -> ArticleGroupResult:
-        """Group articles by topic.
+        """Group articles by topic using a two-stage process.
         
         Args:
             articles (List[ParsedArticle]): List of articles to group.
+            merge_groups (bool, optional): Whether to perform the second stage of merging similar groups. Defaults to True.
             
         Returns:
             ArticleGroupResult: Result of the grouping process.
@@ -51,9 +54,22 @@ class ArticleGrouperAgent:
                 parsed_at=article.parsed_at
             ))
         
-        # Group the articles
-        result = self.openai_client.group_articles(article_data)
+        # Stage 1: Initial specific grouping
+        initial_result = self.openai_client.group_articles(article_data)
         
-        logger.info(f"Created {len(result.groups)} article groups")
+        # Store the initial group count
+        self.initial_group_count = len(initial_result.groups)
         
-        return result
+        logger.info(f"Stage 1: Created {self.initial_group_count} initial article groups")
+        
+        # If merge_groups is False or there's only one group, return the initial result
+        if not merge_groups or self.initial_group_count <= 1:
+            return initial_result
+        
+        # Stage 2: Merge similar groups
+        logger.info("Stage 2: Merging similar groups")
+        merged_result = self.openai_client.merge_groups(initial_result)
+        
+        logger.info(f"Stage 2: Created {len(merged_result.groups)} merged article groups")
+        
+        return merged_result
