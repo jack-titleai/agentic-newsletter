@@ -48,11 +48,11 @@ ARTICLE_GROUPING_SCHEMA = {
                 "properties": {
                     "title": {
                         "type": "string",
-                        "description": "A specific, descriptive title for the group that captures the specific topic shared by these articles"
+                        "description": "A highly specific, descriptive title for the group that includes company names, product names, or event details. Avoid general categories like 'AI in Healthcare' - instead use specific titles like 'Google's Gemini AI Model for Japanese Hospitals'."
                     },
                     "summary": {
                         "type": "string",
-                        "description": "A 1-3 sentence summary of the specific topic shared by these articles"
+                        "description": "A 1-3 sentence summary that explains the specific topic, event, or announcement shared by these articles. Include specific details when available."
                     },
                     "article_ids": {
                         "type": "array",
