@@ -14,7 +14,7 @@ BULLET_POINT_SCHEMA = {
             "type": "array",
             "items": {
                 "type": "object",
-                "required": ["bullet_point", "frequency_score", "impact_score", "specificity_score"],
+                "required": ["bullet_point", "frequency_score", "impact_score", "specificity_score", "source_url"],
                 "additionalProperties": False,
                 "properties": {
                     "bullet_point": {
@@ -32,6 +32,10 @@ BULLET_POINT_SCHEMA = {
                     "specificity_score": {
                         "type": "number",
                         "description": "Score from 1-10 indicating how specific and detailed the bullet point is"
+                    },
+                    "source_url": {
+                        "type": ["string", "null"],
+                        "description": "URL of the source article supporting this bullet point"
                     }
                 }
             }
@@ -64,6 +68,10 @@ class BulletPointData(BaseModel):
         description="Score from 1-10 indicating how specific and detailed the bullet point is",
         ge=1.0,
         le=10.0
+    )
+    source_url: Optional[str] = Field(
+        None,
+        description="URL of the source article supporting this bullet point"
     )
     
     @validator('frequency_score', 'impact_score', 'specificity_score')

@@ -1,11 +1,14 @@
 """Database manager for Agentic Newsletter."""
 
 import logging
-from datetime import datetime
+import os
+from contextlib import contextmanager
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Set, Tuple, Union
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from sqlalchemy import create_engine, select, update
+from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from agentic_newsletter.config.config_loader import ConfigLoader
@@ -456,7 +459,8 @@ class DatabaseManager:
         category: str, 
         frequency_score: float, 
         impact_score: float, 
-        specificity_score: float
+        specificity_score: float,
+        source_url: Optional[str] = None
     ) -> BulletPoint:
         """Add a bullet point to the database.
         
@@ -466,6 +470,7 @@ class DatabaseManager:
             frequency_score (float): The frequency score of the bullet point.
             impact_score (float): The impact score of the bullet point.
             specificity_score (float): The specificity score of the bullet point.
+            source_url (Optional[str], optional): The source URL of the bullet point. Defaults to None.
             
         Returns:
             BulletPoint: The added bullet point.
@@ -477,6 +482,7 @@ class DatabaseManager:
                 frequency_score=frequency_score,
                 impact_score=impact_score,
                 specificity_score=specificity_score,
+                source_url=source_url,
                 created_at=datetime.utcnow()
             )
             session.add(bullet_point_obj)

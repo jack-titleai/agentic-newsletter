@@ -141,7 +141,8 @@ class OpenAIClient:
                                     bullet_point=item["bullet_point"],
                                     frequency_score=float(item["frequency_score"]),
                                     impact_score=float(item["impact_score"]),
-                                    specificity_score=float(item["specificity_score"])
+                                    specificity_score=float(item["specificity_score"]),
+                                    source_url=item.get("source_url")
                                 )
                             )
                         except (KeyError, ValueError, TypeError) as e:

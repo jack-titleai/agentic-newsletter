@@ -169,7 +169,10 @@ class BulletPointGeneratorAgent:
             article_text = f"ARTICLE {i}:\n"
             article_text += f"TITLE: {article.title}\n"
             article_text += f"SUMMARY: {article.summary}\n"
-            article_text += f"BODY: {article.body}\n\n"
+            article_text += f"BODY: {article.body}\n"
+            if article.url:
+                article_text += f"URL: {article.url}\n"
+            article_text += "\n"
             article_texts.append(article_text)
         
         return "\n".join(article_texts)
@@ -186,5 +189,6 @@ class BulletPointGeneratorAgent:
                 frequency_score=bullet_point_data.frequency_score,
                 impact_score=bullet_point_data.impact_score,
                 specificity_score=bullet_point_data.specificity_score,
+                source_url=bullet_point_data.source_url,
                 assigned_category=result.category
             )

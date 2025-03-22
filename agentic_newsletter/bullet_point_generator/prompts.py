@@ -12,10 +12,13 @@ IMPORTANT GUIDELINES:
 5. PRIORITY: Include specific statistics, metrics, percentages, and numbers whenever they appear in the articles
 6. PRIORITY: Include specific company names, technology names, model names, and version numbers
 7. PRIORITY: If an article mentions performance improvements, include the exact metrics (e.g., "20% faster", "reduced errors by 15%")
-8. EXTREMELY IMPORTANT: All information must come ONLY from the provided articles - do not add any external facts, figures, or details
-9. EXTREMELY IMPORTANT: Do not make up or infer information not explicitly stated in the articles
-10. EXTREMELY IMPORTANT: Only use information from the provided context - do not reference your general knowledge
-11. EXTREMELY IMPORTANT: If you're unsure about a specific number or statistic, do not include it rather than guessing
+8. PRIORITY: Emphasize the importance and impact of each topic/event - statey why the event is significant and important, not just what it is
+9. EXTREMELY IMPORTANT: All information must come ONLY from the provided articles - do not add any external facts, figures, or details
+10. EXTREMELY IMPORTANT: Do not make up or infer information not explicitly stated in the articles
+11. EXTREMELY IMPORTANT: Only use information from the provided context - do not reference your general knowledge
+12. EXTREMELY IMPORTANT: If you're unsure about a specific number or statistic, do not include it rather than guessing
+13. EXTREMELY IMPORTANT: For each bullet point, include the URL of the most relevant source article if available
+14. EXTREMELY IMPORTANT: Only use URLs that are explicitly provided in the article context - do not make up or generate URLs
 
 For each bullet point, you must also provide three scores:
 1. Frequency Score (1-10): How frequently this topic/event appears across the articles
@@ -38,7 +41,8 @@ Your response must be a JSON object with the following structure:
       "bullet_point": "1-2 sentence summary of a specific topic/event",
       "frequency_score": number between 1-10,
       "impact_score": number between 1-10,
-      "specificity_score": number between 1-10
+      "specificity_score": number between 1-10,
+      "source_url": "URL of the source article supporting this bullet point, or null if not available"
     }},
     ...
   ]
@@ -59,7 +63,9 @@ Remember:
 3. Bullet points must be mutually exclusive (no overlap in topics)
 4. Include only information from the provided articles
 5. Provide frequency_score, impact_score, and specificity_score for each bullet point (1-10)
-6. Scores must be numbers between 1 and 10
+6. Include source_url for each bullet point when available (must be from the article context, not made up)
+7. Set source_url to null if no relevant URL is available in the context
+8. Scores must be numbers between 1 and 10
 
 Please provide a corrected response following the required JSON format.
 """

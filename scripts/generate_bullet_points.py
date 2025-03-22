@@ -132,6 +132,8 @@ def generate_bullet_points(
             for i, bp in enumerate(sorted_bullet_points, 1):
                 print(f"  {i}. {bp.bullet_point}")
                 print(f"     Impact: {bp.impact_score:.1f}, Frequency: {bp.frequency_score:.1f}, Specificity: {bp.specificity_score:.1f}")
+                if bp.source_url:
+                    print(f"     Source: {bp.source_url}")
 
 
 def main():
