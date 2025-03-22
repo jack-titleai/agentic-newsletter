@@ -3,10 +3,12 @@
 import logging
 import os
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 from agentic_newsletter.article_grouper.openai_client import OpenAIClient
 from agentic_newsletter.article_grouper.schemas import ArticleData, ArticleGroupResult, ArticleGroupData
+from agentic_newsletter.config.config_loader import ConfigLoader
+from agentic_newsletter.database.database_manager import DatabaseManager
 from agentic_newsletter.database.parsed_article import ParsedArticle
 
 logger = logging.getLogger(__name__)
@@ -15,13 +17,17 @@ logger = logging.getLogger(__name__)
 class ArticleGrouperAgent:
     """Agent for grouping articles by topic."""
     
-    def __init__(self, openai_client: Optional[OpenAIClient] = None) -> None:
+    def __init__(self, openai_client: Optional[OpenAIClient] = None, db_manager: Optional[DatabaseManager] = None) -> None:
         """Initialize the article grouper agent.
         
         Args:
             openai_client (Optional[OpenAIClient], optional): OpenAI client. Defaults to None.
+            db_manager (Optional[DatabaseManager], optional): Database manager. Defaults to None.
         """
         self.openai_client = openai_client or OpenAIClient()
+        self.db_manager = db_manager or DatabaseManager()
+        self.config_loader = ConfigLoader()
+        self.valid_categories = set(self.config_loader.get_article_categories())
     
     def group_articles(
         self, 
@@ -73,9 +79,31 @@ class ArticleGrouperAgent:
         logger.info(f"Remapping {len(result.groups)} groups back to original article IDs")
         
         remapped_groups = []
+        article_categories = {}  # Dictionary to store article ID -> category mappings
+        
         for group in result.groups:
+            # Ensure the category name matches exactly one of the predefined categories (case sensitive)
+            if group.title not in self.valid_categories:
+                logger.warning(f"Category '{group.title}' is not in the list of valid categories. Using lowercase version if available.")
+                # Try to find a case-insensitive match
+                for valid_category in self.valid_categories:
+                    if valid_category.lower() == group.title.lower():
+                        logger.info(f"Matched '{group.title}' to valid category '{valid_category}'")
+                        group.title = valid_category
+                        break
+                else:
+                    logger.error(f"Could not match '{group.title}' to any valid category. Using as is.")
+            
             # Map each article ID back to its original ID
-            original_article_ids = [reverse_mapping[id] for id in group.article_ids]
+            original_article_ids = []
+            for remapped_id in group.article_ids:
+                if remapped_id in reverse_mapping:
+                    original_id = reverse_mapping[remapped_id]
+                    original_article_ids.append(original_id)
+                    # Store the category for each article using the ORIGINAL article ID
+                    article_categories[original_id] = group.title
+                else:
+                    logger.warning(f"Remapped ID {remapped_id} not found in reverse mapping. Skipping.")
             
             logger.info(f"Group '{group.title}': Remapped {len(group.article_ids)} articles from consecutive IDs to original IDs")
             
@@ -84,6 +112,10 @@ class ArticleGrouperAgent:
                 summary=group.summary,
                 article_ids=original_article_ids
             ))
+        
+        # Update the assigned_category field in the database using the ORIGINAL article IDs
+        logger.info(f"Updating assigned_category for {len(article_categories)} articles")
+        self.db_manager.update_article_categories(article_categories)
         
         # Create a new result with the remapped article IDs
         remapped_result = ArticleGroupResult(
