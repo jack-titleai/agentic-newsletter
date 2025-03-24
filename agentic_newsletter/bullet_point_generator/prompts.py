@@ -12,13 +12,26 @@ IMPORTANT GUIDELINES:
 5. PRIORITY: Include specific statistics, metrics, percentages, and numbers whenever they appear in the articles
 6. PRIORITY: Include specific company names, technology names, model names, and version numbers
 7. PRIORITY: If an article mentions performance improvements, include the exact metrics (e.g., "20% faster", "reduced errors by 15%")
-8. PRIORITY: Emphasize the importance and impact of each topic/event - statey why the event is significant and important, not just what it is
-9. EXTREMELY IMPORTANT: All information must come ONLY from the provided articles - do not add any external facts, figures, or details
-10. EXTREMELY IMPORTANT: Do not make up or infer information not explicitly stated in the articles
-11. EXTREMELY IMPORTANT: Only use information from the provided context - do not reference your general knowledge
-12. EXTREMELY IMPORTANT: If you're unsure about a specific number or statistic, do not include it rather than guessing
-13. EXTREMELY IMPORTANT: For each bullet point, include the URL of the most relevant source article if available
-14. EXTREMELY IMPORTANT: Only use URLs that are explicitly provided in the article context - do not make up or generate URLs
+8. PRIORITY: Emphasize the importance and impact of each topic/event - state why the event is significant and important, not just what it is
+9. EXTREMELY IMPORTANT: Use simple, easy to read, and direct language.  Keep sentences short and do not use filler words - prioritize statistics, metrics, company names, technology names, and other key terms specified above.
+10. EXTREMELY IMPORTANT: All information must come ONLY from the provided articles - do not add any external facts, figures, or details
+11. EXTREMELY IMPORTANT: Do not make up or infer information not explicitly stated in the articles
+12. EXTREMELY IMPORTANT: Only use information from the provided context - do not reference your general knowledge
+13. EXTREMELY IMPORTANT: If you're unsure about a specific number or statistic, do not include it rather than guessing
+14. EXTREMELY IMPORTANT: For each bullet point, include the URL of the most relevant source article if available
+15. EXTREMELY IMPORTANT: Only use URLs that are explicitly provided in the article context - do not make up or generate URLs
+
+MARKDOWN FORMATTING:
+16. EXTREMELY IMPORTANT: Use markdown bold formatting (**term**) for key terms in each bullet point. Bold the following types of information:
+    - Company names (e.g., **OpenAI**, **Google**, **Microsoft**)
+    - Product names (e.g., **ChatGPT**, **Gemini**, **Claude**)
+    - Model names and versions (e.g., **GPT-4**, **Llama 3**, **Gemini 1.5 Pro**)
+    - Technical terms (e.g., **large language models**, **transformers**, **fine-tuning**)
+    - Performance metrics (e.g., **87.5% accuracy**, **2x faster**, **reduced errors by 15%**)
+    - Numerical data (e.g., **$7 billion**, **75-85%**, **2026**)
+    - Technologies (e.g., **computer vision**, **natural language processing**, **reinforcement learning**)
+17. Do not overuse bold formatting - only bold the most important 1-3 terms in each bullet point
+18. Make sure the markdown syntax is correct - use double asterisks (**term**) for bold text
 
 For each bullet point, you must also provide three scores:
 1. Frequency Score (1-10): How frequently this topic/event appears across the articles
@@ -38,7 +51,7 @@ Your response must be a JSON object with the following structure:
 {{
   "bullet_points": [
     {{
-      "bullet_point": "1-2 sentence summary of a specific topic/event",
+      "bullet_point": "1-2 sentence summary of a specific topic/event with **key terms** in bold",
       "frequency_score": number between 1-10,
       "impact_score": number between 1-10,
       "specificity_score": number between 1-10,
@@ -66,6 +79,7 @@ Remember:
 6. Include source_url for each bullet point when available (must be from the article context, not made up)
 7. Set source_url to null if no relevant URL is available in the context
 8. Scores must be numbers between 1 and 10
+9. Use markdown bold formatting (**term**) for key terms like company names, product names, model names, technical terms, and metrics
 
 Please provide a corrected response following the required JSON format.
 """
