@@ -48,14 +48,27 @@ class EmailParserAgent:
             for article_data in extraction_result["articles"]:
                 article = Article(
                     title=article_data.get("title", "Untitled"),
-                    summary=article_data.get("summary", ""),
                     body=article_data.get("body", ""),
                     url=article_data.get("url"),
-                    tags=article_data.get("tags", [])
+                    tags=article_data.get("tags", []),
+                    category=article_data.get("category", "other topics")
                 )
                 articles.append(article)
         
         self.logger.info(f"Extracted {len(articles)} AI-related articles from text")
+        
+        # Log category counts
+        category_counts = {}
+        for article in articles:
+            category = article.category
+            if category in category_counts:
+                category_counts[category] += 1
+            else:
+                category_counts[category] = 1
+        
+        for category, count in category_counts.items():
+            self.logger.info(f"Category '{category}': {count} articles")
+        
         return articles
     
     def parse_email(self, email_body: str) -> List[Article]:

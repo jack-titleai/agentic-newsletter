@@ -257,7 +257,6 @@ class BulletPointGeneratorAgent:
         for i, article in enumerate(articles, 1):
             article_text = f"ARTICLE {i}:\n"
             article_text += f"TITLE: {article.title}\n"
-            article_text += f"SUMMARY: {article.summary}\n"
             article_text += f"BODY: {article.body}\n"
             if article.url:
                 article_text += f"URL: {article.url}\n"

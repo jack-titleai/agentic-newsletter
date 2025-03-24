@@ -14,10 +14,6 @@ ARTICLE_EXTRACTION_SCHEMA = {
                         "type": "string",
                         "description": "The title or heading of the article"
                     },
-                    "summary": {
-                        "type": "string",
-                        "description": "A 1-2 sentence summary of what the article is about"
-                    },
                     "body": {
                         "type": "string",
                         "description": "The full text content of the article"
@@ -39,9 +35,13 @@ ARTICLE_EXTRACTION_SCHEMA = {
                             }
                         ],
                         "description": "Relevant tags or categories for the article. Use null if no tags can be inferred from the text."
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "The specific category assigned to this article from the predefined list of categories."
                     }
                 },
-                "required": ["title", "summary", "body", "url", "tags"],
+                "required": ["title", "body", "url", "tags", "category"],
                 "additionalProperties": False
             }
         }

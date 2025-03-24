@@ -9,10 +9,10 @@ class Article:
     """Represents an article extracted from a newsletter email."""
     
     title: str
-    summary: str
     body: str
     url: Optional[str] = None
     tags: List[str] = field(default_factory=list)
+    category: Optional[str] = None
     
     def to_dict(self) -> dict:
         """Convert the article to a dictionary.
@@ -22,10 +22,10 @@ class Article:
         """
         return {
             "title": self.title,
-            "summary": self.summary,
             "body": self.body,
             "url": self.url,
-            "tags": self.tags
+            "tags": self.tags,
+            "category": self.category
         }
     
     @classmethod
@@ -40,8 +40,8 @@ class Article:
         """
         return cls(
             title=data.get("title", "Untitled"),
-            summary=data.get("summary", ""),
             body=data.get("body", ""),
             url=data.get("url"),
-            tags=data.get("tags", [])
+            tags=data.get("tags", []),
+            category=data.get("category")
         )

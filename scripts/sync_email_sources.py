@@ -31,6 +31,11 @@ def setup_logging(verbose: bool = False) -> None:
 def sync_email_sources(verbose: bool = False, dry_run: bool = False) -> None:
     """Sync email sources from config file to database.
     
+    This function never removes rows from the email_sources table. It only:
+    1. Adds new sources from config that don't exist in the database
+    2. Activates existing but inactive sources that are in the config
+    3. Deactivates active sources that aren't in the config
+    
     Args:
         verbose (bool, optional): Whether to enable verbose logging. Defaults to False.
         dry_run (bool, optional): If True, don't actually modify the database.
@@ -61,11 +66,15 @@ def sync_email_sources(verbose: bool = False, dry_run: bool = False) -> None:
     for source in db_sources:
         print(f"  - {source.email_address}")
     
-    # Find sources to add
-    sources_to_add = [s for s in config_sources if s not in db_source_emails]
+    # Find sources to add (sources in config that don't exist in the database at all)
+    # Get all email sources (both active and inactive) to check if we need to add any new ones
+    all_db_sources = db_sources + downloader.db_manager.get_inactive_email_sources()
+    all_db_source_emails = [source.email_address for source in all_db_sources]
+    
+    sources_to_add = [s for s in config_sources if s not in all_db_source_emails]
     
     if not sources_to_add:
-        print("\nAll config sources are already in the database.")
+        print("\nAll config sources are already in the database (active or inactive).")
     else:
         print(f"\nAdding {len(sources_to_add)} new sources to database:")
         for source in sources_to_add:
@@ -74,7 +83,7 @@ def sync_email_sources(verbose: bool = False, dry_run: bool = False) -> None:
             if not dry_run:
                 downloader.add_email_source(source)
     
-    # Find sources to activate
+    # Find sources to activate (sources in config that exist in the database but are inactive)
     inactive_sources = downloader.db_manager.get_inactive_email_sources()
     inactive_source_emails = [source.email_address for source in inactive_sources]
     
@@ -88,7 +97,8 @@ def sync_email_sources(verbose: bool = False, dry_run: bool = False) -> None:
             if not dry_run:
                 downloader.update_email_source_status(source, active=True)
     
-    # Find sources to deactivate
+    # Find sources to deactivate (sources in database that are active but not in config)
+    # Note: We NEVER delete sources from the database, only deactivate them
     sources_to_deactivate = [s for s in db_source_emails if s not in config_sources]
     
     if sources_to_deactivate:
@@ -103,6 +113,7 @@ def sync_email_sources(verbose: bool = False, dry_run: bool = False) -> None:
         print("\nDry run, no changes made to database.")
     else:
         print("\nEmail sources synced successfully.")
+        print("Note: No rows were removed from the database, only status changes were made.")
 
 
 def main() -> None:

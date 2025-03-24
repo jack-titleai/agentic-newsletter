@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, Boolean
 from sqlalchemy.orm import relationship
 
 from agentic_newsletter.database.base import Base
@@ -21,6 +21,7 @@ class Email(Base):
     received_date = Column(DateTime, nullable=False)
     added_date = Column(DateTime, default=datetime.utcnow, nullable=False)
     message_id = Column(String(255), unique=True, nullable=False)
+    parsed = Column(Boolean, default=False, nullable=False)
 
     source = relationship("EmailSource", back_populates="emails")
     parsed_articles = relationship("ParsedArticle", back_populates="email")

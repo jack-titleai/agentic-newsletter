@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from agentic_newsletter.config.config_loader import ConfigLoader
 from agentic_newsletter.database import (
     Base, DownloadLog, Email, EmailSource, 
-    GroupingLog, ParsedArticle, ParserLog, BulletPoint, BulletPointLog
+    ParsedArticle, ParserLog, BulletPoint, BulletPointLog
 )
 from agentic_newsletter.email_parser_agent.article import Article
 
@@ -246,13 +246,13 @@ class DatabaseManager:
                 select(Email).where(Email.message_id == message_id)
             ).scalar_one_or_none()
     
-    def add_parsed_article(self, article: Article, email_id: int, sender: str) -> ParsedArticle:
+    def add_parsed_article(self, email_id: int, sender: str, article: Article) -> ParsedArticle:
         """Add a parsed article to the database.
         
         Args:
-            article (Article): The article to add.
-            email_id (int): The ID of the email the article was parsed from.
-            sender (str): The sender of the email.
+            email_id (int): ID of the email that contained the article.
+            sender (str): Sender of the email.
+            article (Article): Article to add.
             
         Returns:
             ParsedArticle: The added parsed article.
@@ -262,8 +262,6 @@ class DatabaseManager:
             session.add(parsed_article)
             session.commit()
             session.refresh(parsed_article)
-            
-            logger.debug(f"Added parsed article: {parsed_article.title}")
             return parsed_article
     
     def get_unparsed_emails(self, start_date: Optional[datetime] = None) -> List[Email]:
@@ -277,17 +275,16 @@ class DatabaseManager:
             List[Email]: A list of unparsed emails.
         """
         with self.get_session() as session:
-            # Query for emails that don't have any parsed articles
-            query = select(Email).outerjoin(ParsedArticle).where(ParsedArticle.id == None)
+            query = select(Email).where(Email.parsed == False)
             
-            # Add date filter if provided
             if start_date:
                 query = query.where(Email.received_date >= start_date)
-                
+            
             # Order by received date (oldest first)
             query = query.order_by(Email.received_date)
             
-            return list(session.execute(query).scalars().all())
+            emails = session.execute(query).scalars().all()
+            return emails
 
     def is_email_parsed(self, email_id: int) -> bool:
         """Check if an email has been parsed.
@@ -299,11 +296,14 @@ class DatabaseManager:
             bool: True if the email has been parsed, False otherwise.
         """
         with self.get_session() as session:
-            # Check if there are any parsed articles for this email
-            count = session.execute(
-                select(ParsedArticle).where(ParsedArticle.email_id == email_id)
-            ).first() is not None
-            return count
+            email = session.execute(
+                select(Email).where(Email.id == email_id)
+            ).scalar_one_or_none()
+            
+            if not email:
+                return False
+                
+            return email.parsed
 
     def get_download_logs(self, limit: int = 10) -> List[DownloadLog]:
         """Get the most recent download logs.
@@ -351,25 +351,29 @@ class DatabaseManager:
             articles = session.execute(query).scalars().all()
             return articles
     
-    def update_article_categories(self, article_categories: dict[int, str]) -> None:
+    def update_article_categories(self, article_categories: Dict[int, str]) -> None:
         """Update the assigned_category field for multiple articles.
         
         Args:
-            article_categories (dict[int, str]): A dictionary mapping article IDs to their assigned categories.
+            article_categories (Dict[int, str]): Dictionary mapping article IDs to categories.
         """
-        current_time = datetime.utcnow()
+        if not article_categories:
+            self.logger.warning("No article categories provided for update")
+            return
+        
+        self.logger.info(f"Updating assigned_category for {len(article_categories)} articles")
         
         with self.get_session() as session:
             for article_id, category in article_categories.items():
-                # Update the article's assigned_category and grouping_datetime
-                session.execute(
-                    update(ParsedArticle)
-                    .where(ParsedArticle.id == article_id)
-                    .values(assigned_category=category, grouping_datetime=current_time)
-                )
+                article = session.query(ParsedArticle).filter(ParsedArticle.id == article_id).first()
+                if article:
+                    article.assigned_category = category
+                    self.logger.debug(f"Updated article {article_id} with category '{category}'")
+                else:
+                    self.logger.warning(f"Article with ID {article_id} not found")
             
             session.commit()
-            logger.info(f"Updated categories for {len(article_categories)} articles")
+            self.logger.info("Article categories updated successfully")
     
     def get_articles_by_category(self, category: str, start_date: datetime, end_date: datetime) -> List[ParsedArticle]:
         """Get articles with a specific assigned category within a date range.
@@ -390,7 +394,7 @@ class DatabaseManager:
                 ParsedArticle.assigned_category == category,
                 Email.received_date >= start_date,
                 Email.received_date <= end_date
-            ).order_by(ParsedArticle.grouping_datetime.desc())  # Order by grouping time, newest first
+            ).order_by(Email.received_date.desc())  # Order by email received date, newest first
             
             articles = session.execute(query).scalars().all()
             return articles
@@ -399,7 +403,7 @@ class DatabaseManager:
         self, duration_seconds: float, articles_processed: int, categories_used: int, 
         sources_processed: int, articles_per_category: Optional[List[int]] = None,
         error_message: Optional[str] = None
-    ) -> GroupingLog:
+    ) -> None:
         """Log a grouping operation.
         
         Args:
@@ -410,9 +414,6 @@ class DatabaseManager:
             articles_per_category (Optional[List[int]], optional): List of article counts per category.
                 Used to calculate statistics. Defaults to None.
             error_message (Optional[str], optional): An error message, if any. Defaults to None.
-            
-        Returns:
-            GroupingLog: The created grouping log.
         """
         # Calculate statistics if articles_per_category is provided
         avg_articles = None
@@ -435,23 +436,7 @@ class DatabaseManager:
             min_articles = min(articles_per_category) if articles_per_category else None
         
         with self.get_session() as session:
-            grouping_log = GroupingLog(
-                duration_seconds=duration_seconds,
-                articles_processed=articles_processed,
-                sources_processed=sources_processed,
-                groups_created=categories_used,
-                average_articles_per_group=avg_articles,
-                median_articles_per_group=median_articles,
-                max_articles_per_group=max_articles,
-                min_articles_per_group=min_articles,
-                error_message=error_message,
-            )
-            session.add(grouping_log)
-            session.commit()
-            session.refresh(grouping_log)
-            
             logger.info(f"Logged grouping: {categories_used} categories from {articles_processed} articles in {duration_seconds:.2f}s")
-            return grouping_log
     
     def add_bullet_point(
         self, 
@@ -635,3 +620,42 @@ class DatabaseManager:
             session.refresh(log)
             
             return log
+
+    def get_parsed_articles_by_email(self, email_id: int) -> List[ParsedArticle]:
+        """Get all parsed articles for a specific email.
+        
+        Args:
+            email_id (int): The ID of the email.
+            
+        Returns:
+            List[ParsedArticle]: A list of parsed articles for the email.
+        """
+        with self.get_session() as session:
+            parsed_articles = session.execute(
+                select(ParsedArticle).where(ParsedArticle.email_id == email_id)
+            ).scalars().all()
+            
+            return parsed_articles
+
+    def mark_email_as_parsed(self, email_id: int) -> bool:
+        """Mark an email as parsed.
+        
+        Args:
+            email_id (int): The ID of the email to mark as parsed.
+            
+        Returns:
+            bool: True if the email was successfully marked as parsed, False otherwise.
+        """
+        with self.get_session() as session:
+            email = session.execute(
+                select(Email).where(Email.id == email_id)
+            ).scalar_one_or_none()
+            
+            if not email:
+                logger.warning(f"Email with ID {email_id} not found")
+                return False
+                
+            email.parsed = True
+            session.commit()
+            logger.debug(f"Email with ID {email_id} marked as parsed")
+            return True

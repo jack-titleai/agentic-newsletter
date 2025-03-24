@@ -101,9 +101,13 @@ def parse_emails(
             if not dry_run:
                 # Add parsed articles to the database
                 for article in articles:
-                    db_manager.add_parsed_article(article, email.id, email.sender_email)
+                    db_manager.add_parsed_article(email.id, email.sender_email, article)
+                
+                # Mark the email as parsed regardless of whether articles were found
+                db_manager.mark_email_as_parsed(email.id)
                 
                 logging.info(f"Added {articles_count} articles to the database.")
+                logging.info(f"Marked email with ID {email.id} as parsed.")
         except Exception as e:
             emails_with_errors += 1
             error_msg = f"Error processing email from {email.sender_email} with subject '{email.subject}': {e}"
@@ -119,6 +123,24 @@ def parse_emails(
     
     # Calculate duration
     duration = time.time() - start_time
+    
+    # Collect category statistics
+    category_counts = {}
+    for email in unparsed_emails:
+        if db_manager.is_email_parsed(email.id):
+            articles = db_manager.get_parsed_articles_by_email(email.id)
+            for article in articles:
+                category = article.assigned_category
+                if category in category_counts:
+                    category_counts[category] += 1
+                else:
+                    category_counts[category] = 1
+    
+    # Log category counts
+    if category_counts:
+        logging.info("Article categories:")
+        for category, count in category_counts.items():
+            logging.info(f"  - {category}: {count} articles")
     
     # Log the parsing operation
     if not dry_run:

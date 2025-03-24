@@ -18,12 +18,10 @@ class ParsedArticle(Base):
     email_id = Column(Integer, ForeignKey("emails.id"), nullable=False)
     sender = Column(String(255), nullable=False)
     title = Column(String(255), nullable=False)
-    summary = Column(Text, nullable=False)
     body = Column(Text, nullable=False)
     url = Column(String(512), nullable=True)
     tags = Column(JSON, nullable=True)  # Store tags as JSON array
-    assigned_category = Column(String(255), nullable=True)  # Category assigned by the grouper agent
-    grouping_datetime = Column(DateTime, nullable=True)  # When the article was assigned to a category
+    assigned_category = Column(String(255), nullable=True)  # Category assigned by the parser
     parsed_at = Column(DateTime, nullable=False)
     added_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -48,10 +46,10 @@ class ParsedArticle(Base):
         
         return Article(
             title=self.title,
-            summary=self.summary,
             body=self.body,
             url=self.url,
-            tags=self.tags if self.tags else []
+            tags=self.tags,
+            category=self.assigned_category
         )
     
     @classmethod
@@ -70,11 +68,9 @@ class ParsedArticle(Base):
             email_id=email_id,
             sender=sender,
             title=article.title,
-            summary=article.summary,
             body=article.body,
             url=article.url,
             tags=article.tags,
-            assigned_category=None,  # Explicitly set to None for new articles
-            grouping_datetime=None,  # Explicitly set to None for new articles
+            assigned_category=article.category,  # Category assigned by the parser
             parsed_at=datetime.utcnow()
         )
