@@ -130,8 +130,8 @@ def generate_markdown_newsletter(bullet_points: List[BulletPoint], timestamp: da
     
     # Define category mapping for renaming and ordering
     category_mapping = {
-        "computer vision": "Image Processing",
-        "large language models and/or natural language processing": "Language Models",
+        "computer vision": "Computer Vision",
+        "large language models and/or natural language processing": "LLMs",
         "healthcare AI / healthcare analytics / healthcare technology": "Healthcare AI",
         "hardware for AI and GPUs": "Hardware",
         "AI policy": "AI Policy",
@@ -150,7 +150,7 @@ def generate_markdown_newsletter(bullet_points: List[BulletPoint], timestamp: da
     markdown.append("")
     
     # Add categories in the specified order
-    ordered_categories = ["Computer Vision", "LLMs", "Healthcare AI", "Hardware", "AI Policy"]
+    ordered_categories = ["Healthcare AI", "Computer Vision", "LLMs", "Hardware", "AI Policy"]
     
     # Track which categories actually have content
     categories_with_content = []
