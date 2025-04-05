@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from agentic_newsletter.config.config_loader import ConfigLoader
 from agentic_newsletter.database import (
     Base, DownloadLog, Email, EmailSource, 
-    ParsedArticle, ParserLog, BulletPoint, BulletPointLog
+    ParsedArticle, ParserLog, BulletPoint, BulletPointLog,
+    TopicSummary, TopicSummaryLog
 )
 from agentic_newsletter.email_parser_agent.article import Article
 
@@ -659,3 +660,126 @@ class DatabaseManager:
             session.commit()
             logger.debug(f"Email with ID {email_id} marked as parsed")
             return True
+            
+    def add_topic_summary(self, topic: str, summary: str) -> TopicSummary:
+        """Add a topic summary to the database.
+        
+        Args:
+            topic (str): The topic of the summary.
+            summary (str): The summary text.
+            
+        Returns:
+            TopicSummary: The added topic summary.
+        """
+        with self.get_session() as session:
+            topic_summary = TopicSummary(
+                topic=topic,
+                summary=summary,
+                created_at=datetime.utcnow()
+            )
+            session.add(topic_summary)
+            session.commit()
+            session.refresh(topic_summary)
+            
+            logger.info(f"Added topic summary for '{topic}'")
+            return topic_summary
+    
+    def get_topic_summaries_by_date_range(
+        self, 
+        start_date: Optional[datetime] = None, 
+        end_date: Optional[datetime] = None
+    ) -> List[TopicSummary]:
+        """Get topic summaries within a date range.
+        
+        Args:
+            start_date (Optional[datetime], optional): Start date for created_at. Defaults to None.
+            end_date (Optional[datetime], optional): End date for created_at. Defaults to None.
+                
+        Returns:
+            List[TopicSummary]: List of topic summaries within the date range.
+        """
+        with self.get_session() as session:
+            query = select(TopicSummary)
+            
+            if start_date:
+                query = query.where(TopicSummary.created_at >= start_date)
+            
+            if end_date:
+                query = query.where(TopicSummary.created_at <= end_date)
+            
+            # Order by creation date (newest first)
+            query = query.order_by(TopicSummary.created_at.desc())
+            
+            summaries = session.execute(query).scalars().all()
+            return summaries
+    
+    def get_most_recent_topic_summaries(self) -> Dict[str, TopicSummary]:
+        """Get the most recent topic summaries for each topic.
+        
+        Returns:
+            Dict[str, TopicSummary]: Dictionary mapping topics to their most recent summaries.
+        """
+        with self.get_session() as session:
+            # Get all topic summaries ordered by creation date (newest first)
+            query = select(TopicSummary).order_by(TopicSummary.created_at.desc())
+            all_summaries = session.execute(query).scalars().all()
+            
+            # Keep only the most recent summary for each topic
+            topic_to_summary: Dict[str, TopicSummary] = {}
+            for summary in all_summaries:
+                if summary.topic not in topic_to_summary:
+                    topic_to_summary[summary.topic] = summary
+            
+            return topic_to_summary
+    
+    def add_topic_summary_log(
+        self,
+        duration_seconds: float,
+        topics_processed: int,
+        summaries_generated: int,
+        bullet_points_processed: int,
+        topic_metrics: Optional[Dict[str, Dict]] = None,
+        error_message: Optional[str] = None
+    ) -> TopicSummaryLog:
+        """Log a topic summary generation operation.
+        
+        Args:
+            duration_seconds (float): Duration of the operation in seconds.
+            topics_processed (int): Number of topics processed.
+            summaries_generated (int): Number of summaries generated.
+            bullet_points_processed (int): Number of bullet points processed.
+            topic_metrics (Optional[Dict[str, Dict]], optional): Metrics per topic. Defaults to None.
+            error_message (Optional[str], optional): Error message if an error occurred. Defaults to None.
+            
+        Returns:
+            TopicSummaryLog: The created log.
+        """
+        with self.get_session() as session:
+            log = TopicSummaryLog(
+                duration_seconds=duration_seconds,
+                topics_processed=topics_processed,
+                summaries_generated=summaries_generated,
+                bullet_points_processed=bullet_points_processed,
+                error_message=error_message
+            )
+            
+            if topic_metrics:
+                log.set_topic_metrics(topic_metrics)
+            
+            session.add(log)
+            session.commit()
+            session.refresh(log)
+            
+            logger.info(f"Logged topic summary generation: {summaries_generated} summaries for {topics_processed} topics in {duration_seconds:.2f}s")
+            return log
+    
+    def get_most_recent_topic_summary_log(self) -> Optional[TopicSummaryLog]:
+        """Get the most recent topic summary log.
+        
+        Returns:
+            Optional[TopicSummaryLog]: The most recent topic summary log, or None if no logs exist.
+        """
+        with self.get_session() as session:
+            query = select(TopicSummaryLog).order_by(TopicSummaryLog.timestamp.desc()).limit(1)
+            log = session.execute(query).scalar_one_or_none()
+            return log

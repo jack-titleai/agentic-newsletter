@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-"""Script to generate a markdown newsletter from bullet points."""
+"""Script to generate a markdown newsletter from bullet points and topic summaries."""
 
 import argparse
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -21,6 +22,8 @@ load_dotenv()
 from agentic_newsletter.database.database_manager import DatabaseManager
 from agentic_newsletter.database.bullet_point import BulletPoint
 from agentic_newsletter.database.bullet_point_log import BulletPointLog
+from agentic_newsletter.database.topic_summary import TopicSummary
+from agentic_newsletter.topic_summary_generator.topic_summary_generator_agent import TopicSummaryGeneratorAgent
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -104,8 +107,58 @@ def calculate_combined_score(bullet_point: BulletPoint) -> float:
     return (bullet_point.impact_score + bullet_point.frequency_score) / 2
 
 
+def generate_topic_summaries(bullet_points_by_category: Dict[str, List[BulletPoint]], category_mapping: Dict[str, str]) -> Dict[str, str]:
+    """Generate summaries for each topic based on bullet points.
+    
+    Args:
+        bullet_points_by_category (Dict[str, List[BulletPoint]]): Dictionary mapping categories to lists of bullet points.
+        category_mapping (Dict[str, str]): Dictionary mapping original category names to display names.
+        
+    Returns:
+        Dict[str, str]: Dictionary mapping display categories to their summaries.
+    """
+    logging.info("Generating topic summaries...")
+    start_time = time.time()
+    
+    # Initialize the topic summary generator agent
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logging.error("OPENAI_API_KEY environment variable not set. Cannot generate topic summaries.")
+        return {}
+    
+    summary_generator = TopicSummaryGeneratorAgent(api_key=api_key, model="gpt-4o")
+    
+    # Create a mapping from original categories to display categories
+    display_categories_by_original = {}
+    for original, display in category_mapping.items():
+        display_categories_by_original[original] = display
+    
+    # Create a dictionary mapping display categories to bullet points
+    display_bullet_points_by_category: Dict[str, List[BulletPoint]] = {}
+    for original_category, bullet_points in bullet_points_by_category.items():
+        display_category = display_categories_by_original.get(original_category, original_category)
+        if display_category not in display_bullet_points_by_category:
+            display_bullet_points_by_category[display_category] = []
+        display_bullet_points_by_category[display_category].extend(bullet_points)
+    
+    # Sort bullet points in each category by combined score
+    for category in display_bullet_points_by_category:
+        display_bullet_points_by_category[category].sort(
+            key=calculate_combined_score,
+            reverse=True  # Highest score first
+        )
+    
+    # Generate summaries
+    summaries, log = summary_generator.generate_summaries(display_bullet_points_by_category)
+    
+    duration = time.time() - start_time
+    logging.info(f"Generated {len(summaries)} topic summaries in {duration:.2f} seconds")
+    
+    return summaries
+
+
 def generate_markdown_newsletter(bullet_points: List[BulletPoint], timestamp: datetime) -> str:
-    """Generate a markdown newsletter from bullet points.
+    """Generate a markdown newsletter from bullet points and topic summaries.
     
     Args:
         bullet_points (List[BulletPoint]): The bullet points to include in the newsletter.
@@ -138,15 +191,14 @@ def generate_markdown_newsletter(bullet_points: List[BulletPoint], timestamp: da
         "other topics": "Miscellaneous"
     }
     
+    # Generate topic summaries
+    topic_summaries = generate_topic_summaries(bullet_points_by_category, category_mapping)
+    
     # Generate markdown content
     markdown = []
     
     # Add title and date
     markdown.append(f"# AI Weekly Recap")
-    markdown.append("")
-    
-    # Add table of contents
-    markdown.append("## Topics")
     markdown.append("")
     
     # Add categories in the specified order
@@ -168,9 +220,15 @@ def generate_markdown_newsletter(bullet_points: List[BulletPoint], timestamp: da
                 categories_with_content.append(display_category)
                 break
     
-    # Only add categories with content to the table of contents
+    # Add highlights section at the top
+    markdown.append("## Highlights")
+    markdown.append("")
+    
+    # Add all summaries at the top
     for display_category in categories_with_content:
-        markdown.append(f"- {display_category}")
+        if display_category in topic_summaries and topic_summaries[display_category]:
+            summary = topic_summaries[display_category]
+            markdown.append(f"**{display_category}**: {summary}")
     
     markdown.append("")
     
