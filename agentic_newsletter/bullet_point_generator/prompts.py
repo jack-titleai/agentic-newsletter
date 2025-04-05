@@ -8,21 +8,22 @@ IMPORTANT GUIDELINES:
 1. Bullet points must be mutually exclusive - no two bullet points should cover the same topic or event
 2. Bullet points should collectively cover all significant topics/events in the articles
 3. A "topic/event" is a specific occurrence or development, not just a general category
-4. Use simple, direct language without filler words that is accessible to both technical and non-technical audiences
-5. PRIORITY: Include specific statistics, metrics, percentages, and numbers whenever they appear in the articles
-6. PRIORITY: Include specific company names, technology names, model names, and version numbers
-7. PRIORITY: If an article mentions performance improvements, include the exact metrics (e.g., "20% faster", "reduced errors by 15%")
-8. PRIORITY: Emphasize the importance and impact of each topic/event - state why the event is significant and important, not just what it is
-9. EXTREMELY IMPORTANT: Use simple, easy to read, and direct language.  Keep sentences short and do not use filler words - prioritize statistics, metrics, company names, technology names, and other key terms specified above.
-10. EXTREMELY IMPORTANT: All information must come ONLY from the provided articles - do not add any external facts, figures, or details
-11. EXTREMELY IMPORTANT: Do not make up or infer information not explicitly stated in the articles
-12. EXTREMELY IMPORTANT: Only use information from the provided context - do not reference your general knowledge
-13. EXTREMELY IMPORTANT: If you're unsure about a specific number or statistic, do not include it rather than guessing
-14. EXTREMELY IMPORTANT: For each bullet point, include the URL of the most relevant source article if available
-15. EXTREMELY IMPORTANT: Only use URLs that are explicitly provided in the article context - do not make up or generate URLs
+4. Use concise, simple, direct wording
+5. Avoid filler words, transition words, introductions, and conclusions
+6. PRIORITY: Include specific statistics, metrics, percentages, and numbers whenever they appear in the articles
+7. PRIORITY: Include specific company names, technology names, model names, and version numbers
+8. PRIORITY: If an article mentions performance improvements, include the exact metrics (e.g., "20% faster", "reduced errors by 15%")
+9. PRIORITY: Emphasize the importance and impact of each topic/event - state why the event is significant and important, not just what it is
+10. EXTREMELY IMPORTANT: Use simple, easy to read, and direct language.  Keep sentences short and do not use filler words - prioritize statistics, metrics, company names, technology names, and other key terms specified above.
+11. EXTREMELY IMPORTANT: All information must come ONLY from the provided articles - do not add any external facts, figures, or details
+12. EXTREMELY IMPORTANT: Do not make up or infer information not explicitly stated in the articles
+13. EXTREMELY IMPORTANT: Only use information from the provided context - do not reference your general knowledge
+14. EXTREMELY IMPORTANT: If you're unsure about a specific number or statistic, do not include it rather than guessing
+15. EXTREMELY IMPORTANT: For each bullet point, include the URL of the most relevant source article if available
+16. EXTREMELY IMPORTANT: Only use URLs that are explicitly provided in the article context - do not make up or generate URLs
 
 MARKDOWN FORMATTING:
-16. EXTREMELY IMPORTANT: Use markdown bold formatting (**term**) for key terms in each bullet point. Bold the following types of information:
+17. EXTREMELY IMPORTANT: Use markdown bold formatting (**term**) for key terms in each bullet point. Bold the following types of information:
     - Company names (e.g., **OpenAI**, **Google**, **Microsoft**)
     - Product names (e.g., **ChatGPT**, **Gemini**, **Claude**)
     - Model names and versions (e.g., **GPT-4**, **Llama 3**, **Gemini 1.5 Pro**)
@@ -30,8 +31,8 @@ MARKDOWN FORMATTING:
     - Performance metrics (e.g., **87.5% accuracy**, **2x faster**, **reduced errors by 15%**)
     - Numerical data (e.g., **$7 billion**, **75-85%**, **2026**)
     - Technologies (e.g., **computer vision**, **natural language processing**, **reinforcement learning**)
-17. Do not overuse bold formatting - only bold the most important 1-3 terms in each bullet point
-18. Make sure the markdown syntax is correct - use double asterisks (**term**) for bold text
+18. Do not overuse bold formatting - only bold the most important 1-3 terms in each bullet point
+19. Make sure the markdown syntax is correct - use double asterisks (**term**) for bold text
 
 For each bullet point, you must also provide three scores:
 1. Frequency Score (1-10): How frequently this topic/event appears across the articles
