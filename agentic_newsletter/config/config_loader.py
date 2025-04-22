@@ -91,6 +91,14 @@ class ConfigLoader:
         """
         return self.config.get("article_categories", [])
     
+    def get_openai_model(self) -> str:
+        """Get the OpenAI model to use from the config.
+        
+        Returns:
+            str: The OpenAI model name to use.
+        """
+        return self.config.get("openai", {}).get("model", "gpt-4o")
+    
     @staticmethod
     def get_project_root() -> Path:
         """Get the project root directory.

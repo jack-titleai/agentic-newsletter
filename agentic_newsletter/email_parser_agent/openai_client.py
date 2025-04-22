@@ -15,17 +15,20 @@ from agentic_newsletter.email_parser_agent.schema import ARTICLE_EXTRACTION_SCHE
 class OpenAIClient:
     """Client for interacting with OpenAI's API."""
     
-    def __init__(self, api_key: str, model: str = "gpt-4o", max_retries: int = 5, retry_delay: float = 1.0):
+    def __init__(self, api_key: str, model: str = None, max_retries: int = 5, retry_delay: float = 1.0):
         """Initialize the OpenAI client.
         
         Args:
             api_key (str): OpenAI API key.
-            model (str, optional): OpenAI model to use. Defaults to "gpt-4o".
+            model (str, optional): OpenAI model to use. If None, uses the model from config.
             max_retries (int, optional): Maximum number of retries for API calls. Defaults to 5.
             retry_delay (float, optional): Delay between retries in seconds. Defaults to 1.0.
         """
+        from agentic_newsletter.config.config_loader import ConfigLoader
+        
         self.client = OpenAI(api_key=api_key)
-        self.model = model
+        config_loader = ConfigLoader()
+        self.model = model if model is not None else config_loader.get_openai_model()
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.logger = logging.getLogger(__name__)

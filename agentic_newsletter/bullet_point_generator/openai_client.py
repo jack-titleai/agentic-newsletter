@@ -25,20 +25,20 @@ logger = logging.getLogger(__name__)
 class OpenAIClient:
     """Client for interacting with OpenAI's API for bullet point generation."""
     
-    def __init__(self, api_key: str = None, model: str = "gpt-4o", max_retries: int = 5, retry_delay: float = 1.0) -> None:
+    def __init__(self, api_key: str = None, model: str = None, max_retries: int = 5, retry_delay: float = 1.0) -> None:
         """Initialize the OpenAI client.
         
         Args:
             api_key (str, optional): OpenAI API key. Defaults to None.
-            model (str, optional): OpenAI model to use. Defaults to "gpt-4o".
+            model (str, optional): OpenAI model to use. If None, uses the model from config.
             max_retries (int, optional): Maximum number of retries for API calls. Defaults to 5.
             retry_delay (float, optional): Initial delay between retries in seconds. Defaults to 1.0.
         """
         self.client = OpenAI(api_key=api_key)
-        self.model = model
+        self.config_loader = ConfigLoader()
+        self.model = model if model is not None else self.config_loader.get_openai_model()
         self.max_retries = max_retries
         self.retry_delay = retry_delay
-        self.config_loader = ConfigLoader()
     
     def generate_bullet_points(self, category: str, articles_text: str) -> BulletPointResult:
         """Generate bullet points for a category based on article content.
